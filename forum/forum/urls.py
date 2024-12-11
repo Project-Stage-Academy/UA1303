@@ -14,8 +14,24 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.http import HttpResponse, JsonResponse
 from django.urls import path
+from rest_framework.urlpatterns import format_suffix_patterns
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+def test(request):
+    return HttpResponse('Testing...')
+
+@api_view(['GET'])
+def api_test(request,format=None):
+    return Response({"testing":"OK"})
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('',test,name='test'),
+    path('api-test/',api_test,name='api_test'),
+
 ]
+urlpatterns=format_suffix_patterns(urlpatterns)
