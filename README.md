@@ -25,7 +25,9 @@ We are committed to delivering a platform that is not just a marketplace for ide
 
 ![image](https://github.com/mehalyna/Forum-Project-Stage-CC/assets/39273210/54b0de76-f6e3-4bf3-bf38-fb5bf1d1d63d)
 
+### DB Schema
 
+![Image](https://github.com/user-attachments/assets/429b1f09-7047-47d2-bf5f-e81c10205413)
 
 ### Basic Epics
 
