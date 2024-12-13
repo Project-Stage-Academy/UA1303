@@ -15,7 +15,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.http import HttpResponse, JsonResponse
-from django.urls import path, re_path
+from django.urls import path, include, re_path
 from rest_framework.urlpatterns import format_suffix_patterns
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -32,6 +32,22 @@ def test(request):
 def api_test(request,format=None):
     return Response({"testing":"OK"})
 
+APP_URLS = [
+    ('users', 'users.urls'),
+    ('profiles', 'profiles.urls'),
+    ('projects', 'projects.urls'),
+    ('communications', 'communications.urls'),
+    ('dashboard', 'dashboard.urls'),
+    ('notifications', 'notifications.urls'),
+]
+
+api_urlpatterns = [
+    path('api/test/', api_test, name='api_test'),
+
+    *[path(f'api/v1/{app}/', include(urls_file, namespace=app)) for app, urls_file in APP_URLS],
+]
+
+api_urlpatterns=format_suffix_patterns(api_urlpatterns)
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -49,8 +65,6 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('',test,name='test'),
-    path('api-test/',api_test,name='api_test'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-]
-urlpatterns = format_suffix_patterns(urlpatterns)
+] + api_urlpatterns
