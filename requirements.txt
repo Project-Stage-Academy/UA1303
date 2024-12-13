@@ -9,3 +9,4 @@ pylint==3.3.2
 pylint-django==2.6.1
 python-dotenv==1.0.1
 whitenoise==6.8.2
+drf-yasg==1.21.8
