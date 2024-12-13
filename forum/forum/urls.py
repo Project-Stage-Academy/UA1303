@@ -27,14 +27,24 @@ def test(request):
 def api_test(request,format=None):
     return Response({"testing":"OK"})
 
+APP_URLS = [
+    ('users', 'users.urls'),
+    ('profiles', 'profiles.urls'),
+    ('projects', 'projects.urls'),
+    ('communications', 'communications.urls'),
+    ('dashboard', 'dashboard.urls'),
+    ('notifications', 'notifications.urls'),
+]
+
+api_urlpatterns = [
+    path('api/test/', api_test, name='api_test'),
+
+    *[path(f'api/v1/{app}/', include(urls_file, namespace=app)) for app, urls_file in APP_URLS],
+]
+
+api_urlpatterns=format_suffix_patterns(api_urlpatterns)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('',test,name='test'),
-    path('api-test/',api_test,name='api_test'),
-    path('communications/', include('communications.urls')),
-    path('dashboard/', include('dashboard.urls')),
-    path('notifications/', include('notifications.urls')),
-
-]
-urlpatterns=format_suffix_patterns(urlpatterns)
+] + api_urlpatterns
