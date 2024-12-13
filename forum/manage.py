@@ -3,6 +3,10 @@
 import os
 import sys
 import psycopg2
+from dotenv import load_dotenv
+
+
+load_dotenv()  
 
 if not os.getenv('VIRTUAL_ENV'):
     print("Warning: It seems like the virtual environment is not activated.")
