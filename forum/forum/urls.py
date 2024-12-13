@@ -15,7 +15,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.http import HttpResponse, JsonResponse
-from django.urls import path
+from django.urls import path, include
 from rest_framework.urlpatterns import format_suffix_patterns
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -32,6 +32,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('',test,name='test'),
     path('api-test/',api_test,name='api_test'),
+    path('communications/', include('communications.urls')),
+    path('dashboard/', include('dashboard.urls')),
+    path('notifications/', include('notifications.urls')),
 
 ]
 urlpatterns=format_suffix_patterns(urlpatterns)
