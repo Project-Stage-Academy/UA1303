@@ -86,4 +86,10 @@ We are committed to delivering a platform that is not just a marketplace for ide
 - Regular feedback from both user groups (startups and investors) should be incorporated.
 
 
+---
+## Pylint Usage Guide
+https://github.com/Project-Stage-Academy/UA1303/wiki/Pylint-Usage-Guide
+
+---
+
 
