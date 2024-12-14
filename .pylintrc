@@ -3,7 +3,7 @@
 load-plugins=pylint_django
 
 # Skip specific directories (Project Requirement)
-ignore=migrations,tests
+ignore=migrations
 
 [BASIC]
 # Enforce naming conventions (Recommended Best Practice)
@@ -15,9 +15,10 @@ function-naming-style=snake_case
 method-naming-style=snake_case
 module-naming-style=snake_case
 variable-naming-style=snake_case
+good-names=self,cls,request,kwargs,queryset
 
 # Avoid these variable names (Recommended Best Practice)
-bad-names=foo,bar,baz,toto,tutu,tata
+bad-names=foo,bar,baz,toto,tutu,tata,tmp,temp,var,data,test
 
 [FORMAT]
 # Set maximum line length (Project Requirement)
@@ -28,8 +29,8 @@ indent-string='    '
 
 [TYPECHECK]
 # Ignore Django-specific modules and classes (Project Requirement)
-ignored-modules=django.http, django.db
-ignored-classes=django.db.models
+ignored-modules=django.http, django.db, django.forms
+ignored-classes=django.db.models, rest_framework.serializers
 
 [DESIGN]
 # Limit complexity of code (Recommended Best Practice)
@@ -39,11 +40,11 @@ max-nested-blocks=3
 
 [MESSAGES CONTROL]
 # Suppress specific warnings (Project Requirement)
-disable=missing-docstring,no-member,invalid-name
+disable=missing-docstring, no-member, invalid-name, too-few-public-methods, abstract-method, attribute-defined-outside-init
 
 [REPORTS]
 # Simplify reporting (Recommended Best Practice)
-reports=no
+reports=yes
 
 # Include a score evaluation (Recommended Best Practice)
 score=yes
