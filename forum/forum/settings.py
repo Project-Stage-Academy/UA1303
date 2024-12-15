@@ -189,6 +189,14 @@ LOGGING = {
             'backupCount': 7,
             'formatter': 'verbose',
         },
+        'database_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': 'logs/database.log',
+            'when': 'midnight',
+            'backupCount': 7,
+            'formatter': 'verbose',
+        },
     },
     'loggers': {
         'django': {
@@ -196,8 +204,8 @@ LOGGING = {
             'level': 'INFO',
         },
         'django.db.backends': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
+            'handlers': ['console', 'database_file'],
+            'level': 'DEBUG',
             'propagate': False,
         },
         'app': {
