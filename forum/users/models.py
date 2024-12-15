@@ -6,8 +6,6 @@ from django.contrib.auth.models import (
 )
 import datetime
 import re
-from django.core.validators import validate_email
-from django.core.exceptions import ValidationError
 from phonenumber_field.modelfields import PhoneNumberField
 
 ROLE_CHOICES = [
@@ -19,15 +17,12 @@ ROLE_CHOICES = [
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
-        if email:
-            try:
-                validate_email(email)
-            except ValidationError:
-                raise ValueError("The Email is not valid")
+        if not email:
+            raise ValueError("The Email must be set")
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
-        user.save(using=self._db)
+        user.save()
         return user
 
     def create_superuser(self, email, password=None, **extra_fields):
@@ -40,12 +35,12 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     user_id = models.AutoField(primary_key=True)
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=30)
-    email = models.EmailField(unique=True,db_index=True)
+    email = models.EmailField(unique=True, db_index=True)
     user_phone = PhoneNumberField(null=True, blank=True)
     title = models.CharField(max_length=30, null=True, blank=True)
     role = models.IntegerField(choices=ROLE_CHOICES, default=0)
-    created_at = models.DateTimeField(auto_now_add=True,editable=False)
-    last_login = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True)
 
     objects = CustomUserManager()
 
