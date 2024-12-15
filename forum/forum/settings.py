@@ -181,7 +181,7 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
         },
-        'file': {
+        'forum_file': {
             'level': 'INFO',
             'class': 'logging.handlers.TimedRotatingFileHandler',
             'filename': 'logs/forum.log',
@@ -200,16 +200,16 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console', 'forum_file'],
             'level': 'INFO',
         },
         'django.db.backends': {
             'handlers': ['console', 'database_file'],
-            'level': 'DEBUG',
+            'level': 'INFO',
             'propagate': False,
         },
         'app': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console', 'forum_file'],
             'level': 'DEBUG',
             'propagate': True,
         },
