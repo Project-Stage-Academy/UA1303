@@ -10,3 +10,5 @@ pylint-django==2.6.1
 python-dotenv==1.0.1
 whitenoise==6.8.2
 drf-yasg==1.21.8
+phonenumbers==8.13.52
+django-phonenumber-field==8.0.0

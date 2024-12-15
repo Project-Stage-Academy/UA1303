@@ -1,6 +1,4 @@
 from django.db import models
-
-from django.db import models
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
@@ -8,6 +6,9 @@ from django.contrib.auth.models import (
 )
 import datetime
 import re
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+from phonenumber_field.modelfields import PhoneNumberField
 
 ROLE_CHOICES = [
     (0, "Unassigned"),
@@ -19,15 +20,10 @@ ROLE_CHOICES = [
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if email:
-            email_pattern = r"^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-zA-Z0-9]+$"
-            if not re.match(email_pattern, email):
+            try:
+                validate_email(email)
+            except ValidationError:
                 raise ValueError("The Email is not valid")
-        else:
-            raise ValueError("The Email field must be set")
-        if password:
-            password_pattern = r"^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,}$"
-            if not re.match(password_pattern, password):
-                raise ValueError("Password is not matching valid pattern")
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
@@ -44,10 +40,9 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     user_id = models.AutoField(primary_key=True)
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=30)
-    email = models.EmailField(unique=True)
-    password = models.CharField(max_length=128)
-    user_phone = models.CharField(max_length=30)
-    title = models.CharField(max_length=30)
+    email = models.EmailField(unique=True,db_index=True)
+    user_phone = PhoneNumberField(null=True, blank=True)
+    title = models.CharField(max_length=30, null=True, blank=True)
     role = models.IntegerField(choices=ROLE_CHOICES, default=0)
     created_at = models.DateTimeField(auto_now_add=True,editable=False)
     last_login = models.DateTimeField(auto_now=True)
@@ -60,6 +55,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     class Meta:
         db_table = "users"
         ordering = ["user_id"]
+        verbose_name = "User"
+        verbose_name_plural = "Users"
 
     def __str__(self):
-        return f"id:{self.user_id} - {self.first_name} - {self.last_name}"
+        return f"id:{self.user_id} - {self.first_name} {self.last_name} (Role: {self.get_role_display()})"
