@@ -17,6 +17,20 @@ class Project(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        verbose_name = "Project"
+        verbose_name_plural = "Projects"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return (
+            f"Project("
+            f"id={self.pk}, "
+            f"startup={self.startup.company_name}, "
+            f"funding goal={self.funding_goal}"
+            f")"
+        )
+
 
 class Media(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="media")

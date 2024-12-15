@@ -19,6 +19,21 @@ class StartupProfile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        db_table = "startup_profiles"
+        verbose_name = "Startup Profile"
+        verbose_name_plural = "Startup Profiles"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return (
+            f"StartupProfile("
+            f"id={self.pk}, "
+            f"user={self.user.first_name} {self.user.last_name}, "
+            f"company={self.company_name}, "
+            f"email={self.email}"
+            f")"
+        )
 
 class InvestorProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="investor_profile")
@@ -36,3 +51,18 @@ class InvestorProfile(models.Model):
         )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "investor_profiles"
+        verbose_name = "Investor Profile"
+        verbose_name_plural = "Investor Profiles"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return (
+            f"InvestorProfile("
+            f"id={self.pk}, "
+            f"user={self.user.first_name} {self.user.last_name}, "
+            f"email={self.email}"
+            f")"
+        )
