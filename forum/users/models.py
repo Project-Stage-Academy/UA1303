@@ -12,6 +12,7 @@ ROLE_CHOICES = [
     (0, "Unassigned"),
     (1, "Startup"),
     (2, "Investor"),
+    (3, "Both")
 ]
 
 
@@ -41,6 +42,9 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     role = models.IntegerField(choices=ROLE_CHOICES, default=0)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True)
+    is_staff = models.BooleanField(default=False)  
+    is_active = models.BooleanField(default=True)  
+    is_superuser = models.BooleanField(default=False)  
 
     objects = CustomUserManager()
 
