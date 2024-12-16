@@ -159,8 +159,12 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_HSTS_SECONDS = 3600  
 SECURE_SSL_REDIRECT = os.getenv('DJANGO_SECURE_SSL_REDIRECT', 'True') == 'True'
 
-LOG_DIR = 'logs'
-os.makedirs(LOG_DIR, exist_ok=True)
+LOG_DIR = os.path.join(BASE_DIR, 'logs')
+
+try:
+    os.makedirs(LOG_DIR, exist_ok=True)
+except OSError as e:
+    raise RuntimeError(f"Failed to create log directory {LOG_DIR}: {e}")
 
 LOGGING = {
     'version': 1,
@@ -184,7 +188,7 @@ LOGGING = {
         'forum_file': {
             'level': 'INFO',
             'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': 'logs/forum.log',
+            'filename': os.path.join(LOG_DIR, 'forum.log'),
             'when': 'midnight',
             'backupCount': 7,
             'formatter': 'verbose',
@@ -192,7 +196,7 @@ LOGGING = {
         'database_file': {
             'level': 'INFO',
             'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': 'logs/database.log',
+            'filename': os.path.join(LOG_DIR, 'database.log'),
             'when': 'midnight',
             'backupCount': 7,
             'formatter': 'verbose',
