@@ -5,13 +5,13 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 from phonenumber_field.modelfields import PhoneNumberField
+from enum import IntEnum
 
-ROLE_CHOICES = [
-    (0, "Unassigned"),
-    (1, "Startup"),
-    (2, "Investor"),
-    (3, "Both")
-]
+class Role(IntEnum):
+    UNASSIGNED = 0
+    STARTUP = 1
+    INVESTOR = 2
+    BOTH = 3
 
 
 class CustomUserManager(BaseUserManager):
@@ -31,6 +31,7 @@ class CustomUserManager(BaseUserManager):
 
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
+    ROLE_CHOICES = [(role.value, role.name.capitalize()) for role in Role]
     user_id = models.AutoField(primary_key=True)
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=30)
