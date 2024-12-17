@@ -10,9 +10,15 @@ services:
       POSTGRES_DB: ${DB_NAME}
     volumes:
       - db_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     restart: always
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      retries: 5
+
 
   app:
     build:
@@ -20,8 +26,16 @@ services:
       dockerfile: Dockerfile
     container_name: forum_app
     restart: on-failure
-    env_file: 
-      - .env
+    environment:
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT}
+      DJANGO_SECRET_KEY: ${SECRET_KEY}
+      DJANGO_DEBUG: ${DEBUG}
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT}
     volumes:
       - .:/app
       - static_volume:/app/static
@@ -30,6 +44,10 @@ services:
       - "8000:8000"
     depends_on:
       - db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 10s
+      retries: 5
 
 
 volumes:
