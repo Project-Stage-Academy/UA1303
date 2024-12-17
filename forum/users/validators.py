@@ -6,7 +6,6 @@ class SpecialCharacterPasswordValidator:
     special_characters = "!@#$%^&*()_+"
 
     def validate(self, password, user=None):
-        special_characters = "!@#$%^&*()_+"
         errors = []
         if not any(char in self.special_characters for char in password):
             errors.append(f"at least one special character ({self.special_characters})")

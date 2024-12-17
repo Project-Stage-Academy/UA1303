@@ -4,8 +4,6 @@ from django.contrib.auth.models import (
     BaseUserManager,
     PermissionsMixin,
 )
-import datetime
-import re
 from phonenumber_field.modelfields import PhoneNumberField
 
 ROLE_CHOICES = [
