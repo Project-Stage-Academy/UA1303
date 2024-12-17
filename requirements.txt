@@ -7,6 +7,8 @@ cryptography==44.0.0
 defusedxml==0.8.0rc2
 dill==0.3.9
 Django==4.1
+django-ratelimit==4.1.0
+django-recaptcha==3.0.0
 djangorestframework==3.15.1
 djangorestframework-simplejwt==5.3.1
 djoser==2.3.1
@@ -17,6 +19,7 @@ isort==5.13.2
 mccabe==0.7.0
 oauthlib==3.2.2
 packaging==24.2
+pillow==11.0.0
 platformdirs==4.3.6
 psycopg2==2.9.10
 psycopg2-binary==2.9.10
@@ -39,3 +42,4 @@ tzdata==2022.2
 uritemplate==4.1.1
 urllib3==2.2.3
 whitenoise==6.8.2
+phonenumbers==8.13.52
