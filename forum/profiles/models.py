@@ -1,9 +1,11 @@
-from django.core.validators import MinValueValidator
 from django.db import models
-from users.models import User
+from django.core.validators import MinValueValidator
 from phonenumber_field.modelfields import PhoneNumberField
+from django.contrib.auth import get_user_model
 
 # Create your models here.
+
+User = get_user_model()
 
 class StartupProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="startup_profile", db_index=True)
