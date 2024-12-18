@@ -1,8 +1,7 @@
-from django.db import models
-from django.core.validators import MinValueValidator
-from phonenumber_field.modelfields import PhoneNumberField
 from django.contrib.auth import get_user_model
-from django.core.validators import validate_email
+from django.core.validators import MinValueValidator, validate_email
+from django.db import models
+from phonenumber_field.modelfields import PhoneNumberField
 
 # Create your models here.
 
