@@ -15,7 +15,10 @@ class HasRole(BasePermission):
         if not request.user.is_authenticated:
             return False
 
-        token_role = request.auth.get('role') if isinstance(request.auth, dict) else None
+        try:
+            token_role = request.auth.get('role')
+        except AttributeError as e:
+            return False
 
         if self.role == Role.UNASSIGNED:
             return token_role == Role.UNASSIGNED.value
