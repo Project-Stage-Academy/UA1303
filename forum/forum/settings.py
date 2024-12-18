@@ -232,7 +232,7 @@ LOGGING = {
             'propagate': True,
         },
     },
-  
+}
 
 # JWT settings
 
@@ -253,3 +253,5 @@ SIMPLE_JWT = {
 
     'AUTH_HEADER_TYPES': ('JWT', 'Bearer'),
 }
+
+AUTH_USER_MODEL = 'users.CustomUser'
