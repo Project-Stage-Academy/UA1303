@@ -7,6 +7,7 @@ from django.contrib.auth.models import (
 from phonenumber_field.modelfields import PhoneNumberField
 from enum import IntEnum
 
+
 class Role(IntEnum):
     UNASSIGNED = 0
     STARTUP = 1
@@ -41,14 +42,21 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     role = models.IntegerField(choices=ROLE_CHOICES, default=0)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True)
-    is_staff = models.BooleanField(default=False)  
-    is_active = models.BooleanField(default=True)  
-    is_superuser = models.BooleanField(default=False)  
+    is_staff = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    is_superuser = models.BooleanField(default=False)
 
     objects = CustomUserManager()
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]
+
+    groups = models.ManyToManyField(
+        "auth.Group", related_name="customuser_groups", blank=True
+    )
+    user_permissions = models.ManyToManyField(
+        "auth.Permission", related_name="customuser_permissions", blank=True
+    )
 
     class Meta:
         db_table = "users"

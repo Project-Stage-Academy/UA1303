@@ -232,7 +232,7 @@ LOGGING = {
             'propagate': True,
         },
     },
-  
+}  
 
 # JWT settings
 
