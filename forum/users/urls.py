@@ -6,5 +6,5 @@ app_name = 'users'
 
 urlpatterns = [
     path('sign-in/', TokenObtainPairView.as_view(), name='sign_in'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='roken_refresh'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]

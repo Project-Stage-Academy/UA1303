@@ -14,6 +14,13 @@ class Role(IntEnum):
     INVESTOR = 2
     BOTH = 3
 
+    @classmethod
+    def has_role(cls, user_role, role) -> bool:
+        '''
+        Checks if user role alligns to specific role.
+        '''
+        return user_role == role or user_role == Role.BOTH
+
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):

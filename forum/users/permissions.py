@@ -1,16 +1,26 @@
 from rest_framework.permissions import BasePermission
+from rest_framework.request import Request
+from .models import Role, CustomUser
 
+class HasRole(BasePermission):
+    """
+    Permission class to check if a user has the required role,
+    based on both the token and the database state.
+    """
 
-class Unassigned(BasePermission):
-    def has_permission(self, request, view):
-        return request.auth.get('role') == 'unassigned'
+    def __init__(self, role: Role):
+        self.role = role
 
+    def has_permission(self, request: Request, view) -> bool:
+        if not request.user.is_authenticated:
+            return False
 
-class IsInvestor(BasePermission):
-    def has_permission(self, request, view):
-        return request.auth.get('role') == 'investor'
+        token_role = request.auth.get('role') if isinstance(request.auth, dict) else None
 
+        if self.role == Role.UNASSIGNED:
+            return token_role == Role.UNASSIGNED.value
 
-class IsStartup(BasePermission):
-    def has_permission(self, request, view):
-        return request.auth.get('role') == 'startup'
+        role_aligns = token_role == self.role.value
+        user_has_role = Role.has_role(user_role=request.user.role, role=self.role)
+
+        return role_aligns and user_has_role

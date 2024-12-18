@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser
+from .models import CustomUser, Role
 from django.core.validators import validate_email
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
@@ -75,7 +75,10 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
-    def get_token(cls, user, role='unassigned'):
+    def get_token(cls, user, role: Role = None):
         token = super().get_token(user)
-        token['role'] = role
+
+        role = role or Role.UNASSIGNED
+        token['role'] = int(role)
+
         return token
