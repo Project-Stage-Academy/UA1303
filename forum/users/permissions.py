@@ -1,29 +1,41 @@
 from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
-from .models import Role, CustomUser
+from rest_framework.exceptions import PermissionDenied
+from rest_framework_simplejwt.tokens import AccessToken
+from .models import Role
 
-class HasRole(BasePermission):
+class BaseRolePermission(BasePermission):
     """
     Permission class to check if a user has the required role,
     based on both the token and the database state.
     """
-
-    def __init__(self, role: Role):
-        self.role = role
+    required_role: Role
 
     def has_permission(self, request: Request, view) -> bool:
         if not request.user.is_authenticated:
             return False
 
-        try:
-            token_role = request.auth.get('role')
-        except AttributeError as e:
-            return False
+        if not isinstance(request.auth, AccessToken) or request.auth is None:
+            raise PermissionDenied("Something is wrong with auth: user's probably not using JWT or another problem")
 
-        if self.role == Role.UNASSIGNED:
+        token_role = request.auth.get('role')
+
+        if self.required_role == Role.UNASSIGNED:
             return token_role == Role.UNASSIGNED.value
 
-        role_aligns = token_role == self.role.value
-        user_has_role = Role.has_role(user_role=request.user.role, role=self.role)
+        ROLE_ALIGNS = token_role == self.required_role.value
+        USER_HAS_ROLE = Role.has_role(user_role=request.user.role, role=self.required_role)
 
-        return role_aligns and user_has_role
+        return ROLE_ALIGNS and USER_HAS_ROLE
+
+
+class IsUnassigned(BaseRolePermission):
+    required_role = Role.UNASSIGNED
+
+
+class IsInvestor(BaseRolePermission):
+    required_role = Role.INVESTOR
+
+
+class IsStartup(BaseRolePermission):
+    required_role = Role.STARTUP
