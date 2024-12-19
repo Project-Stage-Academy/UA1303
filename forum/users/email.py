@@ -1,5 +1,5 @@
 from djoser import email
-from django.contrib.sites.shortcuts import get_current_site
+from django.conf import settings
 
 
 class PasswordResetEmail(email.PasswordResetEmail):
@@ -7,6 +7,6 @@ class PasswordResetEmail(email.PasswordResetEmail):
 
     def get_context_data(self):
         context = super().get_context_data()
-        context["domain"] = get_current_site(self.context["request"]).domain
-        context["protocol"] = "https" if self.context["request"].is_secure() else "http"
+        context["domain"] = settings.DOMAIN_NAME
+        context["protocol"] = "https" if settings.SECURE_SSL_REDIRECT else "http"
         return context

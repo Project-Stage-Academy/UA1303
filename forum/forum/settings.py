@@ -9,10 +9,9 @@ https://docs.djangoproject.com/en/4.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
-
-from pathlib import Path
 import os
 import environ
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -181,3 +180,7 @@ EMAIL_HOST_USER = env('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
 
+RATE_LIMIT_KEY = "ip"
+RATE_LIMIT_RATE = "5/m"
+RATE_LIMIT_BLOCK = True
+DOMAIN_NAME = os.getenv("DOMAIN_NAME", "localhost")
