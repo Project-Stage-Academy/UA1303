@@ -23,27 +23,16 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
-
-def test(request):
-    return HttpResponse('Testing...')
-
-
-@api_view(['GET'])
-def api_test(request,format=None):
-    return Response({"testing":"OK"})
-
 APP_URLS = [
     ('users', 'users.urls'),
-    ('profiles', 'profiles.urls'),
-    ('projects', 'projects.urls'),
+    # ('profiles', 'profiles.urls'),
+    # ('projects', 'projects.urls'),
     ('communications', 'communications.urls'),
     ('dashboard', 'dashboard.urls'),
     ('notifications', 'notifications.urls'),
 ]
 
 api_urlpatterns = [
-    path('api/test/', api_test, name='api_test'),
-
     *[path(f'api/v1/{app}/', include(urls_file, namespace=app)) for app, urls_file in APP_URLS],
 ]
 
@@ -64,9 +53,10 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('',test,name='test'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     re_path(r'^auth/', include('djoser.urls')),
     re_path(r'^auth/', include('djoser.urls.jwt')),
+    path('api/', include('profiles.urls')),
+    path('api/', include('projects.urls')),
 ] + api_urlpatterns

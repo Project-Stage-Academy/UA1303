@@ -186,3 +186,15 @@ SIMPLE_JWT = {
 
     'AUTH_HEADER_TYPES': ('JWT', 'Bearer'),
 }
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'Enter: "Bearer <JWT token>"',
+        }
+    },
+    'USE_SESSION_AUTH': False,
+}

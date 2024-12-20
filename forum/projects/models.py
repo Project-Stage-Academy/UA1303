@@ -59,8 +59,6 @@ class Media(models.Model):
 
     def __str__(self):
         return f"Media(id={self.pk}, startup={self.project.startup.company_name}, project={self.project.title}, file={self.file})"
-    
-        
 
 
 class Description(models.Model):
