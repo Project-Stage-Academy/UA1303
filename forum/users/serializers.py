@@ -1,8 +1,9 @@
 from rest_framework import serializers
-from .models import CustomUser
+from .models import CustomUser, Role
 from django.core.validators import validate_email
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
@@ -70,3 +71,14 @@ class CustomUserSerializer(serializers.ModelSerializer):
         if value not in valid_roles:
             raise serializers.ValidationError("Invalid role.")
         return value
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user, role: Role = None):
+        token = super().get_token(user)
+
+        role = role or Role.UNASSIGNED
+        token['role'] = int(role)
+
+        return token
