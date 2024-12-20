@@ -5,6 +5,8 @@ from .models import StartupProfile
 from .serializers import StartupProfileSerializer
 
 
+#  To do: change check_owner to permission class
+
 class StartupProfileViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = StartupProfile.objects.all()

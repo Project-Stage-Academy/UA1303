@@ -32,6 +32,8 @@ APP_URLS = [
     ('notifications', 'notifications.urls'),
 ]
 
+# APP_ROUTER_URLS =[]
+
 api_urlpatterns = [
     *[path(f'api/v1/{app}/', include(urls_file, namespace=app)) for app, urls_file in APP_URLS],
 ]
