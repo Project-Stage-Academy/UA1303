@@ -34,7 +34,7 @@ def api_test(request,format=None):
 
 APP_URLS = [
     ('users', 'users.urls'),
-    ('profiles', 'profiles.urls'),
+    # ('profiles', 'profiles.urls'),
     ('projects', 'projects.urls'),
     ('communications', 'communications.urls'),
     ('dashboard', 'dashboard.urls'),
@@ -69,4 +69,5 @@ urlpatterns = [
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     re_path(r'^auth/', include('djoser.urls')),
     re_path(r'^auth/', include('djoser.urls.jwt')),
+    path('',include('profiles.urls'))
 ] + api_urlpatterns

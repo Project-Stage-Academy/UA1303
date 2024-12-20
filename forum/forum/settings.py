@@ -89,6 +89,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "forum.wsgi.application"
 
 
+AUTH_USER_MODEL = 'users.CustomUser'
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
@@ -243,7 +244,7 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': False,
-
+    'USER_ID_FIELD': 'user_id',
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': os.getenv('JWT_SIGNING_KEY', SECRET_KEY),
     'AUDIENCE': None,

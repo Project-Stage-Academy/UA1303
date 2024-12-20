@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from .models import InvestorProfile
 from django.core.validators import validate_email
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class InvestorProfileSerializer(serializers.ModelSerializer):
@@ -33,3 +36,16 @@ class InvestorProfileSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "Investor with this email already exists."
                 )
+        return value
+
+    def validate_account_balance(self, value):
+        if value > 1000000000.00 or value < 0:
+            raise serializers.ValidationError(
+                "Account balance have incorrect value."
+            )
+        return value
+
+    def validate_user(self, value):
+        if not User.objects.filter(id=value).exists():
+            raise serializers.ValidationError("User does not exist.")
+        return value
