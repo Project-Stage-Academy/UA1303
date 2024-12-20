@@ -1,6 +1,9 @@
 from django.forms import ValidationError
 from django.test import TestCase
 from .validators import SpecialCharacterPasswordValidator
+from rest_framework.test import APITestCase
+from rest_framework import status
+from .models import CustomUser
 
 
 class CustomUserValidatorTest(TestCase):
@@ -76,3 +79,49 @@ class CustomUserValidatorTest(TestCase):
             with self.subTest(password=password):
                 with self.assertRaises(ValidationError):
                     self.validator.validate(password)
+
+
+class UserRegistrationTests(APITestCase):
+    def setUp(self):
+        self.register_url = "/api/v1/users/user_register/"
+        self.valid_payload = {
+            "first_name": "John",
+            "last_name": "Doe",
+            "email": "johndoe@example.com",
+            "password": "StrongPassword123!",
+            "role": 0,
+        }
+        self.existing_user = CustomUser.objects.create_user(
+            email="existing@example.com",
+            password="ExistingPassword123!",
+            first_name="Existing",
+            last_name="User",
+            role=0,
+        )
+
+    def test_valid_user_registration(self):
+        response = self.client.post(self.register_url, data=self.valid_payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(CustomUser.objects.count(), 2)
+        self.assertEqual(response.data["email"], self.valid_payload["email"])
+
+    def test_missing_required_fields(self):
+        incomplete_payload = {"first_name": "John"}
+        response = self.client.post(self.register_url, data=incomplete_payload)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("email", response.data)
+        self.assertIn("password", response.data)
+
+    def test_invalid_email(self):
+        invalid_payload = self.valid_payload.copy()
+        invalid_payload["email"] = "not-an-email"
+        response = self.client.post(self.register_url, data=invalid_payload)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("email", response.data)
+
+    def test_duplicate_email_registration(self):
+        duplicate_payload = self.valid_payload.copy()
+        duplicate_payload["email"] = self.existing_user.email
+        response = self.client.post(self.register_url, data=duplicate_payload)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("email", response.data)
