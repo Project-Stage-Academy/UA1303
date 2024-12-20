@@ -73,12 +73,29 @@ class CustomUserSerializer(serializers.ModelSerializer):
         return value
 
 
+VALID_TOKEN_ROLES = [Role.STARTUP, Role.INVESTOR]
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    @classmethod
-    def get_token(cls, user, role: Role = None):
-        token = super().get_token(user)
+    def validate(self, attrs):
+        data = super().validate(attrs)
 
-        role = role or Role.UNASSIGNED
-        token['role'] = int(role)
+        request = self.context.get('request')
+        role = request.data.get('role')
 
-        return token
+        if role is None:
+            raise serializers.ValidationError({"role": "This field is required."})
+        
+        try:
+            role = int(role)
+            if role not in [role.value for role in VALID_TOKEN_ROLES]:
+                raise ValueError
+        except (ValueError, TypeError):
+            raise serializers.ValidationError({"role": "Invalid role specified."})
+
+        refresh = self.get_token(self.user)
+        refresh['role'] = role
+
+        data['access'] = str(refresh.access_token)
+        data['refresh'] = str(refresh)
+
+        return data

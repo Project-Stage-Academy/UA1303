@@ -29,10 +29,6 @@ class BaseRolePermission(BasePermission):
         return ROLE_ALIGNS and USER_HAS_ROLE
 
 
-class IsUnassigned(BaseRolePermission):
-    required_role = Role.UNASSIGNED
-
-
 class IsInvestor(BaseRolePermission):
     required_role = Role.INVESTOR
 
