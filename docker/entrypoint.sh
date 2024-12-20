@@ -20,4 +20,5 @@ echo "Collecting static files..."
 python /app/forum/manage.py collectstatic --noinput
 
 echo "Starting Gunicorn server..."
-gunicorn forum.forum.wsgi:application --bind 0.0.0.0:8000 --workers "$GUNICORN_WORKERS" --timeout "$GUNICORN_TIMEOUT"
+cd forum
+gunicorn forum.wsgi:application --bind 0.0.0.0:8000 --workers "$GUNICORN_WORKERS" --timeout "$GUNICORN_TIMEOUT"

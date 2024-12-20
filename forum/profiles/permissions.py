@@ -3,8 +3,7 @@ from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 class IsOwnerOrReadOnly(BasePermission):
     """
-    Custom permission to only allow owners of an object to edit it.
-    Assumes the model instance has an `owner` attribute.
+    Custom permission to only allow owners of a startup to edit it.
     """
 
     def has_object_permission(self, request, view, obj):
@@ -13,5 +12,5 @@ class IsOwnerOrReadOnly(BasePermission):
             return True
 
         # Write permissions are only allowed to the owner of the object
-        return obj.owner == request.user
+        return obj.user == request.user
 

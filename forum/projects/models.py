@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from profiles.models import StartupProfile
 
+
 def validate_image(file):
     try:
         img = Image.open(file)
@@ -13,11 +14,11 @@ def validate_image(file):
     
     valid_extensions = ["jpg", "jpeg", "png"]
     if not file.name.split(".")[-1].lower() in valid_extensions:
-        raise ValidationError(f"Only {", ".join(valid_extensions)} files are allowed.")
+        raise ValidationError(f'Only {", ".join(valid_extensions)} files are allowed.')
     
     if file.size > 5 * 1024 * 1024:
         raise ValidationError("The file size must not exceed 5MB.")
-# Create your models here.
+
 
 class Project(models.Model):
     """

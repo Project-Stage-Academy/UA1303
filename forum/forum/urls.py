@@ -25,20 +25,25 @@ from drf_yasg import openapi
 
 APP_URLS = [
     ('users', 'users.urls'),
-    # ('profiles', 'profiles.urls'),
-    # ('projects', 'projects.urls'),
     ('communications', 'communications.urls'),
     ('dashboard', 'dashboard.urls'),
     ('notifications', 'notifications.urls'),
 ]
 
-# APP_ROUTER_URLS =[]
+APP_ROUTER_URLS = [
+    ('profiles', 'profiles.urls'),
+    ('projects', 'projects.urls'),
+]
 
 api_urlpatterns = [
     *[path(f'api/v1/{app}/', include(urls_file, namespace=app)) for app, urls_file in APP_URLS],
 ]
 
-api_urlpatterns=format_suffix_patterns(api_urlpatterns)
+api_router_urlpatterns = [
+    *[path(f'api/v1/{app}/', include(urls_file, namespace=app)) for app, urls_file in APP_ROUTER_URLS],
+]
+
+api_urlpatterns = format_suffix_patterns(api_urlpatterns) + api_router_urlpatterns
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -59,6 +64,4 @@ urlpatterns = [
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     re_path(r'^auth/', include('djoser.urls')),
     re_path(r'^auth/', include('djoser.urls.jwt')),
-    path('api/', include('profiles.urls')),
-    path('api/', include('projects.urls')),
 ] + api_urlpatterns
