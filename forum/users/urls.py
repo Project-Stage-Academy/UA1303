@@ -4,7 +4,11 @@ from .serializers import CustomTokenObtainPairSerializer
 
 app_name = 'users'
 
-urlpatterns = [
-    path('sign-in/', TokenObtainPairView.as_view(), name='sign_in'),
+auth_urlpatterns = [
+    path('login/', TokenObtainPairView.as_view(), name='login'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+]
+
+urlpatterns = [
+
 ]
