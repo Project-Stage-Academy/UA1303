@@ -80,7 +80,7 @@ class InvestorProfileAPITest(APITestCase):
             "zip_code": "79000",
             "address": "Shevchenka St. 25",
             "phone": "+380991234567",
-            "email": "investor@ex@mple.com", 
+            "email": "investor@ex@mple.com",
             "account_balance": 1500.75,
         }
 
@@ -92,7 +92,6 @@ class InvestorProfileAPITest(APITestCase):
             "phone": "+380991234567",
             "account_balance": 1500.75,
         }
-
 
         self.invalid_balance_data_smaller_balance = {
             "country": "Ukraine",
@@ -121,7 +120,7 @@ class InvestorProfileAPITest(APITestCase):
             "address": "Shevchenka St. 25",
             "phone": "+380991234567",
             "email": "investor@example.com",
-            "account_balance": 999999*999999,
+            "account_balance": 999999 * 999999,
         }
 
     def test_create_investor_profile(self):
@@ -148,17 +147,68 @@ class InvestorProfileAPITest(APITestCase):
 
     def test_create_investor_profile_invalid_balance_bigger(self):
         url = reverse("profiles:investor-profile-list")
-        response = self.client.post(url, self.invalid_balance_data_bigger_balance, format="json")
+        response = self.client.post(
+            url, self.invalid_balance_data_bigger_balance, format="json"
+        )
         print(response.data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("account_balance", response.data)
 
     def test_create_investor_profile_invalid_balance_smaller(self):
         url = reverse("profiles:investor-profile-list")
-        response = self.client.post(url, self.invalid_balance_data_smaller_balance, format="json")
+        response = self.client.post(
+            url, self.invalid_balance_data_smaller_balance, format="json"
+        )
         print(response.data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("account_balance", response.data)    
+        self.assertIn("account_balance", response.data)
+
+    def test_update_investor_profile(self):
+        url = reverse("profiles:investor-profile-list")
+        response = self.client.post(url, self.data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        investor_profile_id = response.data["id"]
+
+        update_url = reverse(
+            "profiles:investor-profile-detail", args=[investor_profile_id]
+        )
+        updated_data = self.data.copy()
+        updated_data["city"] = "Kyiv"
+        response = self.client.put(update_url, updated_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["city"], "Kyiv")
+
+    def test_partial_update_investor_profile(self):
+
+        url = reverse("profiles:investor-profile-list")
+        response = self.client.post(url, self.data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        investor_profile_id = response.data["id"]
+
+        partial_update_url = reverse(
+            "profiles:investor-profile-detail", args=[investor_profile_id]
+        )
+        partial_update_data = {"city": "Odessa"}
+        response = self.client.patch(
+            partial_update_url, partial_update_data, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["city"], "Odessa")
+
+    def test_delete_investor_profile(self):
+        url = reverse("profiles:investor-profile-list")
+        response = self.client.post(url, self.data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        investor_profile_id = response.data["id"]
+
+        delete_url = reverse(
+            "profiles:investor-profile-detail", args=[investor_profile_id]
+        )
+        response = self.client.delete(delete_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        response = self.client.get(delete_url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def tearDown(self):
         del self.user

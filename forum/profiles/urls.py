@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 
 app_name = 'profiles'
 
-router = DefaultRouter()
-router.register(r'investor-profile', InvestorViewSet, basename='investor-profile')
+router_investor = DefaultRouter()
+router_investor.register(r'investor-profile', InvestorViewSet, basename='investor-profile')
 
-urlpatterns = router.urls
+urlpatterns = router_investor.urls
