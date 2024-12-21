@@ -11,7 +11,7 @@ class DescriptionSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
     """Nested serializer that handles both Project and its description"""
 
-    description = DescriptionSerializer(read_only=True)
+    description = DescriptionSerializer()
 
     class Meta:
         model = Project

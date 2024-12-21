@@ -10,6 +10,7 @@ User = get_user_model()
 
 class ProfileTestCase(APITestCase):
     def setUp(self):
+
         # Creating users. User1 is startup owner.
         self.user1 = User.objects.create_user(username='user1', password='password1', email='user1@email.com')
         self.user2 = User.objects.create_user(username='user2', password='password2', email='user2@email.com')
@@ -68,7 +69,9 @@ class ProfileTestCase(APITestCase):
             "description": "Amazing company that should be created"
         }
         response = self.client.post(url, data, format='json')
+        startup = StartupProfile.objects.get(user=self.user2)
         self.assertEqual(response.status_code, 201)
+        self.assertEqual(startup.user, self.user2)
 
     def test_create_second_startup_profile(self):
         """Test that user1 can't create second profile"""
