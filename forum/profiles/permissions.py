@@ -11,6 +11,14 @@ class IsOwnerOrReadOnly(BasePermission):
         if request.method in SAFE_METHODS:
             return True
 
+        # Handling anonymous users
+        if request.user.is_anonymous:
+            return False
+
+        # safeguard to handle cases when object has no user attribute
+        if not hasattr(obj, 'user'):
+            return False
+
         # Write permissions are only allowed to the owner of the object
         return obj.user == request.user
 

@@ -14,6 +14,8 @@ class StartupProfileSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         user = self.context['request'].user
+        if user.is_anonymous:
+            raise ValidationError('You must be logged in.')
         if self.context['request'].method == 'POST' and StartupProfile.objects.filter(user=user).exists():
-            raise ValidationError("You already have a startup profile.")
+            raise ValidationError("You cannot create multiple startup profiles. Each user is limited to one startup profile.")
         return data

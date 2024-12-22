@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db import transaction
 from .models import Project, Description
 
 
@@ -11,7 +12,11 @@ class DescriptionSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
     """Nested serializer that handles both Project and its description"""
 
-    description = DescriptionSerializer()
+    description = serializers.CharField(
+        source="description.description",
+        allow_blank=True,
+        required=False
+    )
 
     class Meta:
         model = Project
@@ -21,11 +26,12 @@ class ProjectSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Overridden method to create a project with description"""
         description_data = validated_data.pop('description', None)
-        project = Project.objects.create(**validated_data)
+        with transaction.atomic():
+            project = Project.objects.create(**validated_data)
 
-        # Handle description data if data exists
-        if description_data:
-            Description.objects.create(project=project, **description_data)
+            # Handle description data if data exists
+            if description_data:
+                Description.objects.create(project=project, **description_data)
         return project
 
     def update(self, instance, validated_data):
@@ -35,7 +41,8 @@ class ProjectSerializer(serializers.ModelSerializer):
 
         description_data = validated_data.pop('description', None)
         for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+            if attr in self.fields and value != getattr(instance, attr):
+                setattr(instance, attr, value)
         instance.save()
 
         # Handle description data if data exists

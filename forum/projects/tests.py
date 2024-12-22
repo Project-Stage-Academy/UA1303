@@ -61,12 +61,12 @@ class ProjectTestCase(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_create_project(self):
-        """Test that user can create a new project"""
+    def test_create_project_with_description(self):
+        """Test that user can create a new project with description"""
         url = reverse('projects:projects-list')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
         data = {
-            'description': {'description': ''},
+            'description': 'my description',
             'title': 'Test Project 2',
             'funding_goal': '20000',
             'is_published': False,
@@ -74,6 +74,109 @@ class ProjectTestCase(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data['startup'], self.startup1.pk)
+
+    def test_create_project_without_description(self):
+        """Test that user can create a new project without description"""
+        url = reverse('projects:projects-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
+        data = {
+            'description': '',
+            'title': 'Test Project 2',
+            'funding_goal': '20000',
+            'is_published': False,
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['startup'], self.startup1.pk)
+
+    def test_create_project_without_description_field(self):
+        """Test that user can create a new project without description field"""
+        url = reverse('projects:projects-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
+        data = {
+            'title': 'Test Project 2',
+            'funding_goal': '20000',
+            'is_published': False,
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['startup'], self.startup1.pk)
+
+    def test_create_project_invalid_title(self):
+        """Test that user cannot create a new project with invalid title"""
+        url = reverse('projects:projects-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
+        data = {
+            'description': '',
+            'title': 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean ms',
+            'funding_goal': '20000',
+            'is_published': False,
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, 400)
+
+    def test_create_project_varchar_funding_goal(self):
+        """Test that user cannot create a new project with invalid funding goal"""
+        url = reverse('projects:projects-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
+        data = {
+            'description': '',
+            'title': 'Test Project 2',
+            'funding_goal': 'asd',
+            'is_published': False,
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, 400)
+
+    def test_create_project_long_funding_goal(self):
+        """Test that user cannot create a new project with long funding goal"""
+        url = reverse('projects:projects-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
+        data = {
+            'description': '',
+            'title': 'Test Project 2',
+            'funding_goal': '2222222222222222',
+            'is_published': False,
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, 400)
+
+    def test_create_project_negative_funding_goal(self):
+        """Test that user cannot create a new project with negative funding goal"""
+        url = reverse('projects:projects-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
+        data = {
+            'description': '',
+            'title': 'Test Project 2',
+            'funding_goal': '-10',
+            'is_published': False,
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, 400)
+
+    def test_create_project_missing_title(self):
+        """Test that user cannot create a new project with missing title"""
+        url = reverse('projects:projects-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
+        data = {
+            'description': '',
+            'funding_goal': '10000',
+            'is_published': False,
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, 400)
+
+    def test_create_project_missing_funding_goal(self):
+        """Test that user cannot create a new project with missing funding goal"""
+        url = reverse('projects:projects-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
+        data = {
+            'description': '',
+            'title': 'Test Project 2',
+            'is_published': False,
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, 400)
 
     def test_partial_update_project(self):
         """Test for user to update existing project"""
@@ -95,9 +198,7 @@ class ProjectTestCase(APITestCase):
         url = reverse('projects:projects-detail', kwargs={'pk': self.project1.pk})
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
         data = {
-            "description": {
-                "description": "updated description",
-            },
+            "description": "updated description",
             "title": "Test Project",
             "funding_goal": "10000",
             "is_published": False
@@ -106,6 +207,53 @@ class ProjectTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.project1.refresh_from_db()
         self.assertEqual(self.project1.description.description, 'updated description')
+
+    def test_update_startup_id(self):
+        """Test for user to block updating startup_id in project"""
+        url = reverse('projects:projects-detail', kwargs={'pk': self.project1.pk})
+        startup = self.project1.startup
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
+        data = {
+            "description": "updated description",
+            "title": "Test Project",
+            "funding_goal": "10000",
+            "is_published": False,
+            "startup": 5
+        }
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.project1.refresh_from_db()
+        self.assertEqual(self.project1.startup, startup)
+
+    def test_update_completed(self):
+        """Test for user to block updating is_completed in project"""
+        url = reverse('projects:projects-detail', kwargs={'pk': self.project1.pk})
+        project_completed = self.project1.is_completed
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
+        data = {
+            "description": "updated description",
+            "title": "Test Project",
+            "funding_goal": "10000",
+            "is_published": False,
+            "is_completed": True
+        }
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.project1.refresh_from_db()
+        self.assertEqual(self.project1.is_completed, project_completed)
+
+    def test_update_project_restricted(self):
+        """Test that user cannot update project if not owner"""
+        url = reverse('projects:projects-detail', kwargs={'pk': self.project1.pk})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
+        data = {
+            "description": "updated description",
+            "title": "Test Project",
+            "funding_goal": "10000",
+            "is_published": False
+        }
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_delete_project_restricted(self):
         """Test for user to protect projects from deletion if user is not a project owner"""

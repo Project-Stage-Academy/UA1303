@@ -39,10 +39,28 @@ class ProfileTestCase(APITestCase):
         refresh = RefreshToken.for_user(user)
         return str(refresh.access_token)
 
-    def test_anonymous_startup_request(self):
+    def test_anonymous_get_startup_request(self):
         """Test that user can't access the protected endpoint without login."""
         url = reverse('profiles:profiles-list')
         response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_anonymous_update_startup_profile(self):
+        """Test that anonymous user cannot update startup profile."""
+        url = reverse('profiles:profiles-detail', kwargs={'pk': self.startup1.pk})
+        data = {
+            "company_name": "Renamed company",
+            "industry": "transport",
+            "size": "100",
+            "country": "USA",
+            "city": "Los Angeles",
+            "zip_code": "2000",
+            "address": "Some street 6",
+            "phone": "+380632225577",
+            "email": "random@email.com",
+            "description": "Amazing company that should not be created"
+        }
+        response = self.client.patch(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_authenticated_startup_request(self):
@@ -72,6 +90,75 @@ class ProfileTestCase(APITestCase):
         startup = StartupProfile.objects.get(user=self.user2)
         self.assertEqual(response.status_code, 201)
         self.assertEqual(startup.user, self.user2)
+        self.assertEqual(startup.company_name, data["company_name"])
+        self.assertEqual(startup.industry, data["industry"])
+        self.assertEqual(startup.size, data["size"])
+        self.assertEqual(startup.country, data["country"])
+        self.assertEqual(startup.city, data["city"])
+        self.assertEqual(startup.zip_code, data["zip_code"])
+        self.assertEqual(startup.address, data["address"])
+        self.assertEqual(startup.phone, data["phone"])
+        self.assertEqual(startup.email, data["email"])
+        self.assertEqual(startup.description, data["description"])
+
+    def test_create_startup_profile_required_fields(self):
+        """Test that user 2 can create profile without optional fields"""
+        url = reverse('profiles:profiles-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
+        data = {
+            "company_name": "New company",
+            "industry": "finance",
+            "size": "200",
+            "country": "USA",
+            "city": "Washington",
+            "zip_code": "2000",
+            "address": "",
+            "phone": "",
+            "email": "use22222r@example.com",
+            "description": ""
+        }
+        response = self.client.post(url, data, format='json')
+        startup = StartupProfile.objects.get(user=self.user2)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(startup.user, self.user2)
+
+    def test_email_validation(self):
+        """Test email validation"""
+        url = reverse('profiles:profiles-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
+        data = {
+            "company_name": "New company",
+            "industry": "finance",
+            "size": "200",
+            "country": "USA",
+            "city": "Washington",
+            "zip_code": "2000",
+            "address": "new street 16",
+            "phone": "+380632225577",
+            "email": "use22222r@example",
+            "description": "Amazing company that should be created"
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, 400)
+
+    def test_phone_validation(self):
+        """Test phone validation"""
+        url = reverse('profiles:profiles-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
+        data = {
+            "company_name": "New company",
+            "industry": "finance",
+            "size": "200",
+            "country": "USA",
+            "city": "Washington",
+            "zip_code": "2000",
+            "address": "new street 16",
+            "phone": "+3806322",
+            "email": "use22222r@example.com",
+            "description": "Amazing company that should be created"
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, 400)
 
     def test_create_second_startup_profile(self):
         """Test that user1 can't create second profile"""
@@ -120,6 +207,12 @@ class ProfileTestCase(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_anonymous_delete_startup_profile(self):
+        """Test for user to protect startup profiles from deletion if user is not logged in"""
+        url = reverse('profiles:profiles-detail', kwargs={'pk': self.startup1.pk})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_delete_startup_profile(self):
         """Test for user to delete startup if user is a startup owner"""

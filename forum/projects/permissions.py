@@ -12,4 +12,7 @@ class IsOwnerOrReadOnly(BasePermission):
             return True
 
         # Write permissions are only allowed to the owner of the object
-        return obj.startup.user == request.user
+        try:
+            return obj.startup.user == request.user
+        except AttributeError:
+            return False

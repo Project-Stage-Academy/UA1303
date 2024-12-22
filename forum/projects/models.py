@@ -1,6 +1,7 @@
 from PIL import Image
+from decimal import Decimal
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxLengthValidator
 from django.db import models
 from profiles.models import StartupProfile
 
@@ -44,7 +45,7 @@ class Project(models.Model):
     funding_goal = models.DecimalField(
         max_digits=15, 
         decimal_places=2, 
-        validators=[MinValueValidator(0.00)]
+        validators=[MinValueValidator(Decimal('0.00'))]
         )
     is_published = models.BooleanField(default=False, db_index=True)
     is_completed = models.BooleanField(default=False, db_index=True)
@@ -94,7 +95,7 @@ class Description(models.Model):
         updated_at (DateTimeField): The date and time the description was last updated.
     """
     project = models.OneToOneField(Project, on_delete=models.CASCADE, related_name="description")
-    description = models.TextField(blank=True)
+    description = models.TextField(blank=True, validators=[MaxLengthValidator(2000)])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
