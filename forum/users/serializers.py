@@ -70,3 +70,12 @@ class CustomUserSerializer(serializers.ModelSerializer):
         if value not in valid_roles:
             raise serializers.ValidationError("Invalid role.")
         return value
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField(required=True)
+
+    def validate_refresh(self, refresh_token):
+        if not refresh_token:
+            raise serializers.ValidationError("This field is required.")
+        return refresh_token
