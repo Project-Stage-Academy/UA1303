@@ -76,6 +76,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
 VALID_TOKEN_ROLES = [Role.STARTUP, Role.INVESTOR]
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    role = serializers.ChoiceField(choices=[(role.value, role.name.lower()) for role in VALID_TOKEN_ROLES])
+    
     def validate(self, attrs):
         data = super().validate(attrs)
 
