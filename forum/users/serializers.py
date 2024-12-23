@@ -1,8 +1,18 @@
 from rest_framework import serializers
-from .models import CustomUser
 from django.core.validators import validate_email
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.contrib.auth.models import User
+from .models import CustomUser
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        if not User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("This email is not registered.")
+        return value
 
 
 class CustomUserSerializer(serializers.ModelSerializer):

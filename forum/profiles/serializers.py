@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from .models import InvestorProfile
+from .models import StartupProfile, InvestorProfile
+from projects.serializers import ProjectSerializer
+from rest_framework.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.contrib.auth import get_user_model
 
@@ -49,3 +51,21 @@ class InvestorProfileSerializer(serializers.ModelSerializer):
         if not any(element.isdigit() for element in value):
             raise serializers.ValidationError("Non-numeric zip code.")
         return value
+
+
+
+class StartupProfileSerializer(serializers.ModelSerializer):
+    projects = ProjectSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = StartupProfile
+        fields = '__all__'
+        read_only_fields = ['user']
+
+    def validate(self, data):
+        user = self.context['request'].user
+        if user.is_anonymous:
+            raise ValidationError('You must be logged in.')
+        if self.context['request'].method == 'POST' and StartupProfile.objects.filter(user=user).exists():
+            raise ValidationError("You cannot create multiple startup profiles. Each user is limited to one startup profile.")
+        return data

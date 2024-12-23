@@ -7,6 +7,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 
 User = get_user_model()
 
+
 class StartupProfile(models.Model):
     """
     Represents the profile of a startup on the platform.
@@ -55,6 +56,7 @@ class StartupProfile(models.Model):
             f"email={self.email}"
             f")"
         )
+
 
 class InvestorProfile(models.Model):
     """

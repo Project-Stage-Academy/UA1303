@@ -1,8 +1,10 @@
 from PIL import Image
+from decimal import Decimal
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxLengthValidator
 from django.db import models
 from profiles.models import StartupProfile
+
 
 def validate_image(file):
     try:
@@ -13,11 +15,11 @@ def validate_image(file):
     
     valid_extensions = ["jpg", "jpeg", "png"]
     if not file.name.split(".")[-1].lower() in valid_extensions:
-        raise ValidationError(f"Only {", ".join(valid_extensions)} files are allowed.")
+        raise ValidationError(f'Only {", ".join(valid_extensions)} files are allowed.')
     
     if file.size > 5 * 1024 * 1024:
         raise ValidationError("The file size must not exceed 5MB.")
-# Create your models here.
+
 
 class Project(models.Model):
     """
@@ -43,7 +45,7 @@ class Project(models.Model):
     funding_goal = models.DecimalField(
         max_digits=15, 
         decimal_places=2, 
-        validators=[MinValueValidator(0.00)]
+        validators=[MinValueValidator(Decimal('0.00'))]
         )
     is_published = models.BooleanField(default=False, db_index=True)
     is_completed = models.BooleanField(default=False, db_index=True)
@@ -80,8 +82,6 @@ class Media(models.Model):
 
     def __str__(self):
         return f"Media(id={self.pk}, startup={self.project.startup.company_name}, project={self.project.title}, file={self.file})"
-    
-        
 
 
 class Description(models.Model):
@@ -95,7 +95,7 @@ class Description(models.Model):
         updated_at (DateTimeField): The date and time the description was last updated.
     """
     project = models.OneToOneField(Project, on_delete=models.CASCADE, related_name="description")
-    description = models.TextField(blank=True)
+    description = models.TextField(blank=True, validators=[MaxLengthValidator(2000)])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
