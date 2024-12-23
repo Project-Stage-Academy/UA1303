@@ -5,11 +5,13 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 import logging
 from .serializers import LogoutSerializer
+from rest_framework.permissions import IsAuthenticated
+
 
 logger = logging.getLogger('app')
 
 class LogoutView(APIView):
-    valid_exceptions = ['Token is blacklisted', 'Token is invalid or expired', 'Token has wrong type']
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Logout by blacklisting the provided refresh token.",
@@ -31,21 +33,24 @@ class LogoutView(APIView):
     )
 
     def post(self, request):
-        serializer = LogoutSerializer(data=request.data)
+        serializer = LogoutSerializer(data=request.data, context={'request': request})
+        
         if not serializer.is_valid():
-            return Response(serializer.errors, status=400)
+            logger.error(f"Validation error: {serializer.errors},  Request Data: {request.data}")
+            return Response({"error": "Access denied."}, status=400)
+        
         refresh_token = serializer.validated_data['refresh']
 
         try:
             token = RefreshToken(refresh_token)
             token.blacklist()
+            
+            logger.info("User logged out successfully.")
 
             return Response({"detail": "Logged out successfully."}, status=200)
         except Exception as e:
-            if str(e) not in self.valid_exceptions:
-                logger.error(f"Error occurred: {e}")       
-                return Response({"error": "Access denied."}, status=403)
-            else:
-                return Response({"error": "Invalid or expired token."}, status=403)
+            logger.error(f"Unexpected error occurred: {e}")       
+            return Response({"error": "Access denied."}, status=403)
+    
                
             
