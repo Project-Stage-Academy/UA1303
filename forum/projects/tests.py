@@ -13,8 +13,8 @@ class ProjectTestCase(APITestCase):
     def setUp(self):
 
         # Creating users. User1 is startup owner who is creating projects.
-        self.user1 = User.objects.create_user(username='user1', password='password1', email='user1@email.com')
-        self.user2 = User.objects.create_user(username='user2', password='password2', email='user2@email.com')
+        self.user1 = User.objects.create_user(password='password1', email='user1@email.com')
+        self.user2 = User.objects.create_user(password='password2', email='user2@email.com')
 
         # Create tokens for authorization
         self.token_user1 = self.get_jwt_token(self.user1)
