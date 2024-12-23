@@ -23,29 +23,29 @@ class InvestorProfileSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "user", "created_at", "updated_at"]
+        extra_kwargs = {
+            "phone": {"required": False},
+        }
 
     def validate_email(self, value):
-        if self.instance:
-            if self.instance.email != value:
-                if InvestorProfile.objects.filter(email=value).exists():
-                    raise serializers.ValidationError(
-                        "Investor with this email already exists."
-                    )
-        else:
-            if InvestorProfile.objects.filter(email=value).exists():
-                raise serializers.ValidationError(
-                    "Investor with this email already exists."
-                )
-        return value
-
-    def validate_account_balance(self, value):
-        if value > 1000000000.00 or value < 0:
+        if (
+            InvestorProfile.objects.filter(email=value)
+            .exclude(pk=self.instance.pk if self.instance else None)
+            .exists()
+        ):
             raise serializers.ValidationError(
-                "Account balance have incorrect value."
+                "Investor with this email already exists."
             )
         return value
 
-    def validate_user(self, value):
-        if not User.objects.filter(id=value).exists():
-            raise serializers.ValidationError("User does not exist.")
+    def validate_account_balance(self, value):
+        if value > 9999999999999.99 or value < 0:
+            raise serializers.ValidationError(
+                "Account balance have incorrect value.It required to be positive and lower than 9999999999999.99"
+            )
+        return value
+
+    def validate_zip_code(self, value):
+        if not any(element.isdigit() for element in value):
+            raise serializers.ValidationError("Non-numeric zip code.")
         return value
