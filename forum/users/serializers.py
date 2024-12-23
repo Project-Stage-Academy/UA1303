@@ -3,6 +3,7 @@ from .models import CustomUser
 from django.core.validators import validate_email
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
@@ -75,7 +76,25 @@ class CustomUserSerializer(serializers.ModelSerializer):
 class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField(required=True)
 
-    def validate_refresh(self, refresh_token):
-        if not refresh_token:
-            raise serializers.ValidationError("This field is required.")
-        return refresh_token
+    def validate(self, data):
+        request = self.context.get('request')
+        auth_header = request.headers.get('Authorization', '')
+        access_token = auth_header.split()[1]
+        refresh_token = data.get('refresh')
+        
+        try:
+            decoded_access_token = AccessToken(access_token)
+            user_id_from_access = decoded_access_token['user_id']
+        except Exception as e:
+            raise serializers.ValidationError({"access token error": str(e)})
+
+        try:
+            decoded_refresh_token = RefreshToken(refresh_token)
+            user_id_from_refresh = decoded_refresh_token['user_id']
+        except Exception as e:
+            raise serializers.ValidationError({"refresh token error": str(e)})
+
+        if user_id_from_access != user_id_from_refresh:
+            raise serializers.ValidationError({"error": "User ID mismatch between tokens."})
+
+        return data
