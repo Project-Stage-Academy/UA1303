@@ -553,3 +553,80 @@ class ProfileTestCase(APITestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(StartupProfile.objects.filter(pk=self.startup1.pk).exists())
+
+
+class SaveProfileTestCase(APITestCase):
+    def setUp(self):
+
+        # Creating users. User1 is startup owner. User 2 is investor
+        self.user1 = User.objects.create_user(password='password1', email='user1@email.com')
+        self.user2 = User.objects.create_user(password='password2', email='user2@email.com')
+
+        # Create tokens for authorization
+        self.token_user1 = self.get_jwt_token(self.user1)
+        self.token_user2 = self.get_jwt_token(self.user2)
+
+        # Create startup profile for user1
+        self.startup1 = StartupProfile.objects.create(
+            user=self.user1,
+            company_name='SuperCompany',
+            industry='transport',
+            size='100',
+            country='USA',
+            city='Los Angeles',
+            zip_code='2000',
+            address='Some street 7',
+            phone='+380632225577',
+            email='random@email.com',
+            description='Some description',
+        )
+
+        # Create Investor profile for user 2
+        self.investor1 = InvestorProfile.objects.create(
+            user=self.user2,
+            country="Ukraine",
+            phone="+380631234455",
+            email="testcase@gmail.com",
+        )
+
+    def get_jwt_token(self, user):
+        """Helper method to create a JWT token for a user."""
+        refresh = RefreshToken.for_user(user)
+        return str(refresh.access_token)
+
+    def test_anonymous_save_startup_request(self):
+        """Test that user can't access the protected endpoint without login."""
+        url = reverse('profiles:save-startup', kwargs={'startup_id': self.startup1.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_save_startup(self):
+        """Positive test to save startup to favourites"""
+        url = reverse('profiles:save-startup', kwargs={'startup_id': self.startup1.pk})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_save_startup_wrong_user(self):
+        """Negative test to save startup to favourites when user has no investor profile"""
+        url = reverse('profiles:save-startup', kwargs={'startup_id': self.startup1.pk})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_save_startup_wrong_startup_id(self):
+        """Negative test to save startup to favourites when startup does not exist"""
+        invalid_startup_id = StartupProfile.objects.order_by(
+            '-id').first().id + 1 if StartupProfile.objects.exists() else 1
+        url = reverse('profiles:save-startup', kwargs={'startup_id': invalid_startup_id})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_save_startup_second_time(self):
+        """Negative test to save startup to favourites if startup is already followed"""
+        url = reverse('profiles:save-startup', kwargs={'startup_id': self.startup1.pk})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
+        self.client.post(url)
+        response2 = self.client.post(url)
+        self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)

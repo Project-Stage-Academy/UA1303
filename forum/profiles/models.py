@@ -3,7 +3,6 @@ from django.core.validators import MinValueValidator, validate_email
 from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
 
-# Create your models here.
 
 User = get_user_model()
 
@@ -72,6 +71,7 @@ class InvestorProfile(models.Model):
         email (EmailField): The unique email address of the investor.
         account_balance (DecimalField): The balance in the investor's account, 
                                         with a default value of 0.00 and a minimum value of 0.00.
+        followed_startups: Many-to-many relationship with StartupProfile.
         created_at (DateTimeField): The date and time the profile was created.
         updated_at (DateTimeField): The date and time the profile was last updated.
     """
@@ -88,6 +88,7 @@ class InvestorProfile(models.Model):
         default=0.00, 
         validators=[MinValueValidator(0.00)]
         )
+    followed_startups = models.ManyToManyField(StartupProfile, blank=True, related_name="followers")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
