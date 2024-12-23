@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/4.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
+
 import os
 import environ
 from pathlib import Path
@@ -59,7 +60,6 @@ INSTALLED_APPS = [
     "dashboard",
     "notifications",
 ]
-
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -242,7 +242,7 @@ LOGGING = {
             'propagate': True,
         },
     },
-}  
+}
 
 # JWT settings
 
@@ -279,3 +279,16 @@ RATE_LIMIT_KEY = "ip"
 RATE_LIMIT_RATE = "5/m"
 RATE_LIMIT_BLOCK = True
 DOMAIN_NAME = os.getenv("DOMAIN_NAME", "localhost")
+
+# Swagger settings to enable JWT authorization
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'Enter: "Bearer <JWT token>"',
+        }
+    },
+    'USE_SESSION_AUTH': False,
+}

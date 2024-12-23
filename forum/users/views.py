@@ -5,8 +5,8 @@ from rest_framework.decorators import api_view
 from django_ratelimit.decorators import ratelimit
 from django.http import JsonResponse
 
-from forum.forum import settings
-from forum.users.serializers import PasswordResetSerializer
+from forum import settings
+from .serializers import PasswordResetSerializer
 
 RATE_LIMIT_KEY = os.getenv("RATE_LIMIT_KEY", "ip")
 RATE_LIMIT_RATE = os.getenv("RATE_LIMIT_RATE", "5/m")
