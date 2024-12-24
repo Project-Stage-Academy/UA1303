@@ -1,12 +1,15 @@
 from unittest.mock import Mock
 from django.forms import ValidationError
 from django.test import TestCase
+from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
 from rest_framework.exceptions import PermissionDenied
-from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework import exceptions
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 from .permissions import IsInvestor, IsStartup
 from .models import Role
 from .validators import SpecialCharacterPasswordValidator
+from .serializers import CustomTokenObtainPairSerializer
 
 
 class CustomUserValidatorTest(TestCase):
@@ -102,41 +105,126 @@ class TestBaseRolePermission(APITestCase):
         """Test that unauthenticated users are denied access."""
         self.mock_user.is_authenticated = False
 
-        permission = IsInvestor()
-        has_permission = permission.has_permission(self.mock_request, self.mock_view)
-
-        self.assertFalse(has_permission)
+        for permission_class in [IsInvestor, IsStartup]:
+            with self.subTest(permission=permission_class):
+                permission = permission_class()
+                has_permission = permission.has_permission(self.mock_request, self.mock_view)
+                self.assertFalse(has_permission)
 
     def test_request_user_missing_role_attribute(self):
         """Test that requests without a user role attribute are denied."""
         del self.mock_user.role  # Simulate user missing the `role` attribute
 
-        permission = IsInvestor()
-        with self.assertRaises(PermissionDenied):
-            permission.has_permission(self.mock_request, self.mock_view)
+        for permission_class in [IsInvestor, IsStartup]:
+            with self.subTest(permission=permission_class):
+                permission = permission_class()
+                with self.assertRaises(PermissionDenied):
+                    permission.has_permission(self.mock_request, self.mock_view)
 
     def test_correct_role_grants_access(self):
         """Test that users with the correct role are granted access."""
-        self.mock_user.role = Role.INVESTOR.value
+        # Iterate over each role and its corresponding permission
+        test_cases = [
+            (Role.INVESTOR, IsInvestor),
+            (Role.STARTUP, IsStartup),
+        ]
+        for user_role, permission_class in test_cases:
+            with self.subTest(role=user_role, permission=permission_class):
+                self.mock_user.role = user_role.value
+                self.mock_token.get = Mock(return_value=user_role.value)  # Align token role
 
-        permission = IsInvestor()
-        has_permission = permission.has_permission(self.mock_request, self.mock_view)
-
-        self.assertTrue(has_permission)
+                permission = permission_class()
+                has_permission = permission.has_permission(self.mock_request, self.mock_view)
+                self.assertTrue(has_permission)
 
     def test_incorrect_role_denies_access(self):
         """Test that users with an incorrect role are denied access."""
-        self.mock_user.role = Role.STARTUP.value
+        test_cases = [
+            (Role.STARTUP, IsInvestor),  # Startup user, investor permission
+            (Role.INVESTOR, IsStartup),  # Investor user, startup permission
+        ]
+        for user_role, permission_class in test_cases:
+            with self.subTest(role=user_role, permission=permission_class):
+                self.mock_user.role = user_role.value
+                self.mock_token.get = Mock(return_value=user_role.value)  # Align token role
 
-        permission = IsInvestor()
-        has_permission = permission.has_permission(self.mock_request, self.mock_view)
-
-        self.assertFalse(has_permission)
+                permission = permission_class()
+                has_permission = permission.has_permission(self.mock_request, self.mock_view)
+                self.assertFalse(has_permission)
 
     def test_invalid_auth_type(self):
         """Test that invalid authentication raises PermissionDenied."""
         self.mock_request.auth = None  # Simulate no authentication
 
-        permission = IsInvestor()
-        with self.assertRaises(PermissionDenied):
-            permission.has_permission(self.mock_request, self.mock_view)
+        for permission_class in [IsInvestor, IsStartup]:
+            with self.subTest(permission=permission_class):
+                permission = permission_class()
+                with self.assertRaises(PermissionDenied):
+                    permission.has_permission(self.mock_request, self.mock_view)
+
+
+User = get_user_model()
+
+
+class TestCustomTokenObtainPairSerializer(APITestCase):
+    def setUp(self):
+        # Create a test user
+        self.user = User.objects.create_user(
+            email="testuser@example.com",
+            password="securepassword",
+            role=Role.INVESTOR.value  # Assign a default role
+        )
+
+    def test_valid_role(self):
+        """Test that a valid role is added to the token payload."""
+        request_data = {"email": self.user.email, "password": "securepassword", "role": Role.STARTUP.value}
+        context = {"request": self._get_mock_request(request_data)}
+
+        serializer = CustomTokenObtainPairSerializer(context=context)
+        validated_data = serializer.validate(request_data)
+
+        # Extract refresh token
+        refresh_token = RefreshToken(validated_data["refresh"])
+
+        self.assertEqual(refresh_token["role"], Role.STARTUP.value)
+
+    def test_missing_role(self):
+        """Test that a missing role raises a ValidationError."""
+        request_data = {"email": self.user.email, "password": "securepassword"}  # No role provided
+        context = {"request": self._get_mock_request(request_data)}
+
+        serializer = CustomTokenObtainPairSerializer(context=context)
+        with self.assertRaises(exceptions.ValidationError):
+            serializer.validate(request_data)
+
+        # self.assertIn("role", exc.exception)
+
+    def test_invalid_role(self):
+        """Test that an invalid role raises a ValidationError."""
+        request_data = {"email": self.user.email, "password": "securepassword", "role": 9999}  # Invalid role
+        context = {"request": self._get_mock_request(request_data)}
+
+        serializer = CustomTokenObtainPairSerializer(context=context)
+        with self.assertRaises(exceptions.ValidationError):
+            serializer.validate(request_data)
+
+        # self.assertIn("role", exc.exception)
+
+    def test_role_added_to_access_token(self):
+        """Test that the role is correctly added to the access token."""
+        request_data = {"email": self.user.email, "password": "securepassword", "role": Role.INVESTOR.value}
+        context = {"request": self._get_mock_request(request_data)}
+
+        serializer = CustomTokenObtainPairSerializer(context=context)
+        validated_data = serializer.validate(request_data)
+
+        # Extract access token
+        access_token = RefreshToken(validated_data["refresh"]).access_token
+
+        self.assertEqual(access_token["role"], Role.INVESTOR.value)
+
+    def _get_mock_request(self, data):
+        """Helper method to create a mock request object with given data."""
+        mock_request = Mock()
+        mock_request.data = data
+        return mock_request
