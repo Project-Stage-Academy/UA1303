@@ -82,6 +82,15 @@ class CustomUserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid role.")
         return value
 
+    def validate_first_name(self, value):
+        if len(value) > 30:
+            raise serializers.ValidationError("First name must not exceed 30 characters.")
+        return value
+
+    def validate_last_name(self, value):
+        if len(value) > 30:
+            raise serializers.ValidationError("Last name must not exceed 30 characters.")
+        return value
 
 class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField(required=True)
