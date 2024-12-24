@@ -1,4 +1,5 @@
 from django.urls import path
+from .views import password_reset_with_captcha
 from .views import LogoutView
 
 
@@ -9,5 +10,5 @@ auth_urlpatterns = [
 ]
 
 urlpatterns = [
-    
+    path('password/reset/', password_reset_with_captcha, name='password_reset_captcha'),
 ]
