@@ -44,6 +44,14 @@ tzdata==2022.2
 uritemplate==4.1.1
 urllib3==2.2.3
 whitenoise==6.8.2
-django-phonenumber-field==8.0.0
+drf-yasg==1.21.8
+pillow==11.0.0
+django_phonenumber_field==8.0.0
+phonenumbers==8.13.52
+djoser==2.3.1
+djangorestframework-simplejwt==5.3.1
 django-environ==0.11.2
 django-filter==24.3
+
+
+

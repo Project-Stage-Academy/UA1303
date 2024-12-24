@@ -11,17 +11,17 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
 import os
-from datetime import timedelta
-from pathlib import Path
-
 import environ
+from pathlib import Path
 from dotenv import load_dotenv
+from datetime import timedelta
 
 load_dotenv()
 env = environ.Env()
 environ.Env.read_env()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
@@ -35,6 +35,7 @@ DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
 
 # ALLOWED_HOSTS = []
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost").split(",")
+
 
 # Application definition
 
@@ -91,6 +92,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "forum.wsgi.application"
 
+
+AUTH_USER_MODEL = 'users.CustomUser'
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
@@ -111,6 +114,7 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT"),
     }
 }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
@@ -133,6 +137,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+
 # Internationalization
 # https://docs.djangoproject.com/en/4.1/topics/i18n/
 
@@ -143,6 +148,7 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 
 USE_TZ = True
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
@@ -252,7 +258,7 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': False,
-
+    'USER_ID_FIELD': 'user_id',
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': os.getenv('JWT_SIGNING_KEY', SECRET_KEY),
     'AUDIENCE': None,
