@@ -70,3 +70,13 @@ class CustomUserSerializer(serializers.ModelSerializer):
         if value not in valid_roles:
             raise serializers.ValidationError("Invalid role.")
         return value
+
+    def validate_first_name(self, value):
+        if len(value) > 30:
+            raise serializers.ValidationError("First name must not exceed 50 characters.")
+        return value
+
+    def validate_last_name(self, value):
+        if len(value) > 30:
+            raise serializers.ValidationError("Last name must not exceed 50 characters.")
+        return value

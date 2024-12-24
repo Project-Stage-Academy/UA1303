@@ -4,8 +4,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import CustomUserSerializer
 from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import APIException
 
-logger = logging.getLogger('users')
+logger = logging.getLogger(__name__)
 
 class RegisterUserView(APIView):
     """
@@ -38,12 +39,13 @@ class RegisterUserView(APIView):
                 }
                 return Response(response_data, status=status.HTTP_201_CREATED)
             
+            
+            except APIException as e:
+                logger.error(f"API error during signup: {e}")
+                raise
             except Exception as e:
-                logger.error(f"Error during user registration: {e}", exc_info=True)
-                return Response(
-                    {"detail": "Internal server error."},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
+                logger.critical(f"Unexpected error during signup: {e}", exc_info=True)
+                raise
             
         # Return validation errors
         logger.warning(
