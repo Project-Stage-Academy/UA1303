@@ -10,9 +10,29 @@ class NotificationTypeSerializer(serializers.ModelSerializer):
 
 
 class NotificationPreferenceSerializer(serializers.ModelSerializer):
-    user = serializers.StringRelatedField()  # Показує ім'я користувача
-    allowed_notification_types = NotificationTypeSerializer(many=True)  # Вбудовані серіалізатори для типів сповіщень
+    """
+    Serializer for reading user's notification preferences.
+    """
+    allowed_notification_types = serializers.SerializerMethodField()
 
     class Meta:
         model = NotificationPreference
         fields = ['user', 'allowed_notification_types']
+
+    def get_allowed_notification_types(self, obj):
+        notification_types = obj.allowed_notification_types.all()
+        return NotificationTypeSerializer(notification_types, many=True).data
+
+
+class NotificationPreferenceUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating user's notification preferences.
+    """
+    allowed_notification_types = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=NotificationType.objects.all()
+    )
+
+    class Meta:
+        model = NotificationPreference
+        fields = ['allowed_notification_types']

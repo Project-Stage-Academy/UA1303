@@ -15,4 +15,4 @@ class NotificationPreference(models.Model):
     allowed_notification_types = models.ManyToManyField(NotificationType, related_name='allowed_users')
 
     def __str__(self):
-        return f"Preferences for {self.user.first_name} {self.user.last_name} "
+        return f"Preferences for {self.user.username}"
