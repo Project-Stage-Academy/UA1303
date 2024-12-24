@@ -22,32 +22,31 @@ from rest_framework.response import Response
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-
-
-def test(request):
-    return HttpResponse('Testing...')
-
-
-@api_view(['GET'])
-def api_test(request,format=None):
-    return Response({"testing":"OK"})
+from users.urls import auth_urlpatterns
 
 APP_URLS = [
     ('users', 'users.urls'),
-    ('profiles', 'profiles.urls'),
-    ('projects', 'projects.urls'),
     ('communications', 'communications.urls'),
     ('dashboard', 'dashboard.urls'),
     ('notifications', 'notifications.urls'),
 ]
 
+APP_ROUTER_URLS = [
+    ('profiles', 'profiles.urls'),
+    ('projects', 'projects.urls'),
+]
+
 api_urlpatterns = [
-    path('api/test/', api_test, name='api_test'),
+    path('api/v1/auth/', include((auth_urlpatterns, 'auth'), namespace='auth')),
 
     *[path(f'api/v1/{app}/', include(urls_file, namespace=app)) for app, urls_file in APP_URLS],
 ]
 
-api_urlpatterns=format_suffix_patterns(api_urlpatterns)
+api_router_urlpatterns = [
+    *[path(f'api/v1/{app}/', include(urls_file, namespace=app)) for app, urls_file in APP_ROUTER_URLS],
+]
+
+api_urlpatterns = format_suffix_patterns(api_urlpatterns) + api_router_urlpatterns
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -64,7 +63,6 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('',test,name='test'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     re_path(r'^auth/', include('djoser.urls')),

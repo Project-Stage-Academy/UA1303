@@ -10,13 +10,15 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
-from pathlib import Path
 import os
+import environ
+from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
 
 load_dotenv()
-
+env = environ.Env()
+environ.Env.read_env()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -45,6 +47,11 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "rest_framework.authtoken",
+    "djoser",
+    "rest_framework_simplejwt.token_blacklist",
+    "captcha",
+    "phonenumber_field",
     "drf_yasg",
     "users",
     "profiles",
@@ -52,8 +59,6 @@ INSTALLED_APPS = [
     "communications",
     "dashboard",
     "notifications",
-    "djoser",
-    "rest_framework_simplejwt.token_blacklist"
 ]
 
 MIDDLEWARE = [
@@ -88,6 +93,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "forum.wsgi.application"
 
 
+AUTH_USER_MODEL = 'users.CustomUser'
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
@@ -118,7 +124,7 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 8}
     },
     {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
@@ -167,12 +173,17 @@ REST_FRAMEWORK = {
     ],
 }
 
+DJOSER = {
+    'PASSWORD_RESET_CONFIRM_URL': 'password-reset/{uid}/{token}/',
+    'SEND_ACTIVATION_EMAIL': False,
+    'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': True,
+}
+
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_HSTS_SECONDS = 3600  
 SECURE_SSL_REDIRECT = os.getenv('DJANGO_SECURE_SSL_REDIRECT', 'True') == 'True'
 
-#35-initial/integrate-logging-system
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
 
 try:
@@ -219,7 +230,7 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['console', 'forum_file'],
-            'level': 'INFO',
+            'level': 'WARNING',
         },
         'django.db.backends': {
             'handlers': ['console', 'database_file'],
@@ -231,23 +242,18 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
-        'users': {
-            'handlers': ['console', 'forum_file'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
     },
 }
 
 # JWT settings
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': False,
-
+    'USER_ID_FIELD': 'user_id',
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': os.getenv('JWT_SIGNING_KEY', SECRET_KEY),
     'AUDIENCE': None,
@@ -259,4 +265,78 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('JWT', 'Bearer'),
 }
 
+
 AUTH_USER_MODEL = 'users.CustomUser'
+=======
+RECAPTCHA_PUBLIC_KEY = env('RECAPTCHA_PUBLIC_KEY')
+RECAPTCHA_PRIVATE_KEY = env('RECAPTCHA_PRIVATE_KEY')
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = env('EMAIL_HOST')
+EMAIL_PORT = env.int('EMAIL_PORT')
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS')
+EMAIL_HOST_USER = env('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
+
+RATE_LIMIT_KEY = "ip"
+RATE_LIMIT_RATE = "5/m"
+RATE_LIMIT_BLOCK = True
+DOMAIN_NAME = os.getenv("DOMAIN_NAME", "localhost")
+
+# Swagger settings to enable JWT authorization
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'Enter: "Bearer <JWT token>"',
+        }
+    },
+    'USE_SESSION_AUTH': False,
+}
+
+RECAPTCHA_PUBLIC_KEY = env('RECAPTCHA_PUBLIC_KEY')
+RECAPTCHA_PRIVATE_KEY = env('RECAPTCHA_PRIVATE_KEY')
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = env('EMAIL_HOST')
+EMAIL_PORT = env.int('EMAIL_PORT')
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS')
+EMAIL_HOST_USER = env('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
+
+RATE_LIMIT_KEY = "ip"
+RATE_LIMIT_RATE = "5/m"
+RATE_LIMIT_BLOCK = True
+DOMAIN_NAME = os.getenv("DOMAIN_NAME", "localhost")
+
+# Swagger settings to enable JWT authorization
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'Enter: "Bearer <JWT token>"',
+        }
+    },
+    'USE_SESSION_AUTH': False,
+}
+
+# Swagger settings to enable JWT authorization
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'Enter: "Bearer <JWT token>"',
+        }
+    },
+    'USE_SESSION_AUTH': False,
+}
+
