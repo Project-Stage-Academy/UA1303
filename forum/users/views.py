@@ -86,7 +86,7 @@ class LogoutView(APIView):
             return Response({"error": "Access denied."}, status=403)
 
    
-  class RegisterUserView(APIView):
+class RegisterUserView(APIView):
     """
     View for user registration.
     """
