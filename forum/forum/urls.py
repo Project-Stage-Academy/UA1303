@@ -22,6 +22,7 @@ from rest_framework.response import Response
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from users.urls import auth_urlpatterns
 
 APP_URLS = [
     ('users', 'users.urls'),
@@ -36,6 +37,8 @@ APP_ROUTER_URLS = [
 ]
 
 api_urlpatterns = [
+    path('api/v1/auth/', include((auth_urlpatterns, 'auth'), namespace='auth')),
+
     *[path(f'api/v1/{app}/', include(urls_file, namespace=app)) for app, urls_file in APP_URLS],
 ]
 
