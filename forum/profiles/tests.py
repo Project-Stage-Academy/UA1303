@@ -596,20 +596,20 @@ class SaveProfileTestCase(APITestCase):
 
     def test_anonymous_save_startup_request(self):
         """Test that user can't access the protected endpoint without login."""
-        url = reverse('profiles:save-startup', kwargs={'startup_id': self.startup1.pk})
+        url = reverse('profiles:startups-save', kwargs={'pk': self.startup1.pk})
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_save_startup(self):
         """Positive test to save startup to favourites"""
-        url = reverse('profiles:save-startup', kwargs={'startup_id': self.startup1.pk})
+        url = reverse('profiles:startups-save', kwargs={'pk': self.startup1.pk})
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_save_startup_wrong_user(self):
         """Negative test to save startup to favourites when user has no investor profile"""
-        url = reverse('profiles:save-startup', kwargs={'startup_id': self.startup1.pk})
+        url = reverse('profiles:startups-save', kwargs={'pk': self.startup1.pk})
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -618,14 +618,14 @@ class SaveProfileTestCase(APITestCase):
         """Negative test to save startup to favourites when startup does not exist"""
         invalid_startup_id = StartupProfile.objects.order_by(
             '-id').first().id + 1 if StartupProfile.objects.exists() else 1
-        url = reverse('profiles:save-startup', kwargs={'startup_id': invalid_startup_id})
+        url = reverse('profiles:startups-save', kwargs={'pk': invalid_startup_id})
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_save_startup_second_time(self):
         """Negative test to save startup to favourites if startup is already followed"""
-        url = reverse('profiles:save-startup', kwargs={'startup_id': self.startup1.pk})
+        url = reverse('profiles:startups-save', kwargs={'pk': self.startup1.pk})
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
         self.client.post(url)
         response2 = self.client.post(url)

@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, validate_email
 from django.db import models
@@ -86,7 +87,7 @@ class InvestorProfile(models.Model):
         max_digits=15, 
         decimal_places=2, 
         default=0.00, 
-        validators=[MinValueValidator(0.00)]
+        validators=[MinValueValidator(Decimal(0.00))]
         )
     followed_startups = models.ManyToManyField(StartupProfile, blank=True, related_name="followers")
     created_at = models.DateTimeField(auto_now_add=True)
