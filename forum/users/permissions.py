@@ -26,6 +26,12 @@ class BaseRolePermission(BasePermission):
 
         token_role = request.auth.get('role')
 
+        if not hasattr(request.user, 'role'):
+            raise PermissionDenied("User instance doesn't have role attribute")
+        
+        if token_role is None:
+            raise PermissionDenied("Token doesn't have role attribute")
+
         ROLE_ALIGNS = Role.token_role_aligns(token_role, self.required_role)
         USER_HAS_ROLE = Role.has_role(user_role=request.user.role, role=self.required_role)
 
