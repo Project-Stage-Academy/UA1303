@@ -53,7 +53,6 @@ class InvestorProfileSerializer(serializers.ModelSerializer):
         return value
 
 
-
 class StartupProfileSerializer(serializers.ModelSerializer):
     projects = ProjectSerializer(many=True, read_only=True)
 
