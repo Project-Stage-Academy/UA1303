@@ -200,7 +200,7 @@ LOGGING = {
             'style': '{',
         },
         'simple': {
-            'format': '{levelname} {message}',
+            'format': '{levelname} {name} {message}',
             'style': '{',
         },
     },
@@ -217,6 +217,7 @@ LOGGING = {
             'when': 'midnight',
             'backupCount': 7,
             'formatter': 'verbose',
+            'delay': True,
         },
         'database_file': {
             'level': 'INFO',
@@ -225,6 +226,7 @@ LOGGING = {
             'when': 'midnight',
             'backupCount': 7,
             'formatter': 'verbose',
+            'delay': True,
         },
     },
     'loggers': {
@@ -237,7 +239,7 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
-        'app': {
+        '': {
             'handlers': ['console', 'forum_file'],
             'level': 'DEBUG',
             'propagate': True,
@@ -248,7 +250,7 @@ LOGGING = {
 # JWT settings
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=20),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -267,7 +269,6 @@ SIMPLE_JWT = {
 
 
 AUTH_USER_MODEL = 'users.CustomUser'
-=======
 RECAPTCHA_PUBLIC_KEY = env('RECAPTCHA_PUBLIC_KEY')
 RECAPTCHA_PRIVATE_KEY = env('RECAPTCHA_PRIVATE_KEY')
 
