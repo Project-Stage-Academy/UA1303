@@ -135,9 +135,9 @@ def remove_investor_profiles(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('profiles', '0002_initial'),
+        ('profiles', '0001_initial'),
         ('users', '0002_add_users'),
-        ('profiles', '0003_add_startup_profiles'),
+        ('profiles', '0002_add_startup_profiles'),
     ]
 
     operations = [
