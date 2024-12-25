@@ -7,12 +7,12 @@ users_data = [
     {
         "first_name": "Oleksii", 
         "last_name": "Shumylo",
-        "email": "oleksii@shumilo.com",
+        "email": "oleksii@shumylo.com",
         "title": "Python developer",
         "role": 3,
         "is_staff": True,
         "is_superuser": True,
-        "password": "oleksiishumilo1303",
+        "password": "oleksiishumylo1303",
         "user_phone": "+3807773300"
     },
     {
