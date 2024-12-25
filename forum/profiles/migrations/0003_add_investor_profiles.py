@@ -14,13 +14,13 @@ investor_profiles_data = [
         "account_balance": 12323.44,
     },
     {
-        "user_email": "oleksii@shumilo.com",
+        "user_email": "oleksii@shumylo.com",
         "country": "Ukraine",
         "city": "Lviv",
         "zip_code": "79018",
         "address": "57 Fedkovycha Street",
         "phone": "+380 67 123 4567",
-        "email": "oleksii@shumilo.com",
+        "email": "oleksii@shumylo.com",
         "account_balance": 54628.80,
     },
     {
