@@ -9,9 +9,6 @@ from .models import InvestorProfile, StartupProfile
 from .serializers import InvestorProfileSerializer, StartupProfileSerializer
 from .permissions import IsOwnerOrReadOnly
 
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
-
 class InvestorViewSet(ModelViewSet):
 
     queryset = InvestorProfile.objects.all()
