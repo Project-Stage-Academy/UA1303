@@ -637,19 +637,25 @@ class SaveProfileTestCase(APITestCase):
 
 class ListSavedProfilesTestCase(APITestCase):
 
-    get_saved_startups_url = 'profiles:startups-saved-startups'
+    get_saved_startups_url = 'profiles:startups-list'
 
     def setUp(self):
+
+        self.startup1_name = 'SuperCompany'
+        self.startup1_industry = 'transport'
+        self.startup1_size = '100'
+        self.startup1_country = 'United Kingdom'
+        self.startup1_city = 'Los Angeles'
 
         # Creating users and their profiles
         self.user1 = User.objects.create_user(password='password1', email='user1@email.com')
         self.startup1 = StartupProfile.objects.create(
             user=self.user1,
-            company_name='SuperCompany',
-            industry='transport',
-            size='100',
-            country='USA',
-            city='Los Angeles',
+            company_name=self.startup1_name,
+            industry=self.startup1_industry,
+            size=self.startup1_size,
+            country=self.startup1_country,
+            city=self.startup1_city,
             zip_code='90002',
             address='Some street 7',
             phone='+380632225577',
@@ -659,10 +665,10 @@ class ListSavedProfilesTestCase(APITestCase):
         self.user2 = User.objects.create_user(password='password2', email='user2@email.com')
         self.startup2 = StartupProfile.objects.create(
             user=self.user2,
-            company_name='SuperCompany',
-            industry='transport',
-            size='100',
-            country='United Kingdom',
+            company_name='Small Business',
+            industry='tourism',
+            size='200',
+            country='USA',
             city='London',
             zip_code='E1 6AN',
             address='Some street 74',
@@ -704,4 +710,66 @@ class ListSavedProfilesTestCase(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
+
+    def search_and_assert(self, search_query, expected_count):
+        """Helper method to perform search and assert results."""
+        url = reverse(self.get_saved_startups_url) + f'?search={search_query}'
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user3}')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), expected_count)
+
+    def filter_and_assert(self, search_query, filter_field, expected_count):
+        """Helper method to perform filter and assert results."""
+        url = reverse(self.get_saved_startups_url) + f'?{filter_field}={search_query}'
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user3}')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), expected_count)
+
+    def test_get_followed_startups_name_search(self):
+        """Test search by name"""
+        search_query = self.startup1_name[0:-2]
+        self.search_and_assert(search_query, 1)
+
+    def test_get_followed_startups_industry_search(self):
+        """Test search by industry"""
+        search_query = self.startup1_industry[0:-2]
+        self.search_and_assert(search_query, 1)
+
+    def test_get_followed_startups_country_search(self):
+        """Test search by country"""
+        search_query = self.startup1_country[0:-2]
+        self.search_and_assert(search_query, 1)
+
+    def test_get_followed_startups_city_search(self):
+        """Test search by city"""
+        search_query = self.startup1_city[0:-2]
+        self.search_and_assert(search_query, 1)
+
+    def test_get_followed_startups_industry_filter(self):
+        """Test filter by industry"""
+        search_query = self.startup1_industry
+        filter_field = 'industry'
+        self.filter_and_assert(search_query, filter_field, 1)
+
+    def test_get_followed_startups_country_filter(self):
+        """Test filter by country"""
+        search_query = self.startup1_country
+        filter_field = 'country'
+        self.filter_and_assert(search_query, filter_field, 1)
+
+    def test_get_followed_startups_city_filter(self):
+        """Test filter by city"""
+        search_query = self.startup1_city
+        filter_field = 'city'
+        self.filter_and_assert(search_query, filter_field, 1)
+
+    def test_get_followed_startups_size_filter(self):
+        """Test filter by size"""
+        search_query = self.startup1_size
+        filter_field = 'size'
+        self.filter_and_assert(search_query, filter_field, 1)
+
+
 

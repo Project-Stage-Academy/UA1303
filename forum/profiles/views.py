@@ -1,6 +1,6 @@
 from rest_framework import status
+from rest_framework.mixins import ListModelMixin
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
-from rest_framework.mixins import ListModelMixin, DestroyModelMixin
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -9,6 +9,8 @@ from .models import InvestorProfile, StartupProfile
 from .serializers import InvestorProfileSerializer, StartupProfileSerializer
 from .permissions import IsOwnerOrReadOnly
 
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
 
 class InvestorViewSet(ModelViewSet):
 
@@ -37,10 +39,14 @@ class StartupProfileViewSet(ModelViewSet):
         serializer.save(user=self.request.user)
 
 
-class SaveStartupViewSet(GenericViewSet):
+class SaveStartupViewSet(ListModelMixin, GenericViewSet):
     """Managing user's favourite startups"""
     permission_classes = [IsAuthenticated]
     serializer_class = StartupProfileSerializer
+
+    search_fields = ['company_name', 'industry', 'country', 'city']
+    filterset_fields = ['industry', 'country', 'city', 'size']
+    ordering_fields = ['company_name', 'created_at']
 
     def get_queryset(self):
         """Returns queryset for current user's saved startups"""
@@ -57,11 +63,3 @@ class SaveStartupViewSet(GenericViewSet):
             return Response({'detail': 'Startup is already followed'}, status=status.HTTP_400_BAD_REQUEST)
         startup.followers.add(investor)
         return Response({'detail': 'Startup is saved'}, status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=['get'], url_path='saved-startups', url_name='saved-startups')
-    def list_saved_startups(self, request):
-        """List all startups saved by the current user"""
-        investor = get_object_or_404(InvestorProfile, user=request.user)
-        followed_startups = investor.followed_startups.all()
-        serializer = self.get_serializer(followed_startups, many=True)
-        return Response(serializer.data)
