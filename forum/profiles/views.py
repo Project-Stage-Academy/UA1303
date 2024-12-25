@@ -1,8 +1,8 @@
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
+from rest_framework.mixins import ListModelMixin, DestroyModelMixin
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.serializers import Serializer
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import InvestorProfile, StartupProfile
@@ -38,16 +38,30 @@ class StartupProfileViewSet(ModelViewSet):
 
 
 class SaveStartupViewSet(GenericViewSet):
-    """Adds startup to user's favourites"""
+    """Managing user's favourite startups"""
     permission_classes = [IsAuthenticated]
-    serializer_class = Serializer
-    queryset = StartupProfile.objects.all()
+    serializer_class = StartupProfileSerializer
+
+    def get_queryset(self):
+        """Returns queryset for current user's saved startups"""
+        if self.request.user.is_authenticated:
+            investor = get_object_or_404(InvestorProfile, user=self.request.user)
+            return investor.followed_startups.all()
 
     @action(detail=True, methods=['post'], url_path='save', url_name='save')
-    def post(self, request, pk):
+    def save_startup(self, request, pk):
+        """Add a startup to the user's favourites"""
         investor = get_object_or_404(InvestorProfile, user=request.user)
         startup = get_object_or_404(StartupProfile, pk=pk)
         if startup.followers.filter(pk=investor.pk).exists():
             return Response({'detail': 'Startup is already followed'}, status=status.HTTP_400_BAD_REQUEST)
         startup.followers.add(investor)
         return Response({'detail': 'Startup is saved'}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path='saved-startups', url_name='saved-startups')
+    def list_saved_startups(self, request):
+        """List all startups saved by the current user"""
+        investor = get_object_or_404(InvestorProfile, user=request.user)
+        followed_startups = investor.followed_startups.all()
+        serializer = self.get_serializer(followed_startups, many=True)
+        return Response(serializer.data)
