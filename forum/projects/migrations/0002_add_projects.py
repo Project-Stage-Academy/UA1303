@@ -155,7 +155,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('projects', '0001_initial'),
-        ('profiles', '0003_add_startup_profiles'),
+        ('profiles', '0002_add_startup_profiles'),
     ]
 
     operations = [
