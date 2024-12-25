@@ -178,7 +178,7 @@ def remove_startup_profiles(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('profiles', '0002_initial'),
+        ('profiles', '0001_initial'),
         ('users', '0002_add_users'),
     ]
 
