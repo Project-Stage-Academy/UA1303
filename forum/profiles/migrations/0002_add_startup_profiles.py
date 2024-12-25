@@ -130,7 +130,7 @@ startup_profiles_data = [
             the Swiss Alps."
     },
     {
-        "user_email": "oleksii@shumilo.com",
+        "user_email": "oleksii@shumylo.com",
         "company_name": "Emerald Bites Catering",
         "industry": "Catering Services",
         "size": 290,
