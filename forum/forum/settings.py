@@ -11,17 +11,17 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
 import os
-import environ
-from pathlib import Path
-from dotenv import load_dotenv
 from datetime import timedelta
+from pathlib import Path
+
+import environ
+from dotenv import load_dotenv
 
 load_dotenv()
 env = environ.Env()
 environ.Env.read_env()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
@@ -35,7 +35,6 @@ DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
 
 # ALLOWED_HOSTS = []
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost").split(",")
-
 
 # Application definition
 
@@ -92,7 +91,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "forum.wsgi.application"
 
-
 AUTH_USER_MODEL = 'users.CustomUser'
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
@@ -115,7 +113,6 @@ DATABASES = {
     }
 }
 
-
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
 
@@ -137,7 +134,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/4.1/topics/i18n/
 
@@ -148,7 +144,6 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
@@ -181,7 +176,7 @@ DJOSER = {
 
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_HSTS_SECONDS = 3600  
+SECURE_HSTS_SECONDS = 3600
 SECURE_SSL_REDIRECT = os.getenv('DJANGO_SECURE_SSL_REDIRECT', 'True') == 'True'
 
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
@@ -267,7 +262,6 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('JWT', 'Bearer'),
 }
 
-
 AUTH_USER_MODEL = 'users.CustomUser'
 RECAPTCHA_PUBLIC_KEY = env('RECAPTCHA_PUBLIC_KEY')
 RECAPTCHA_PRIVATE_KEY = env('RECAPTCHA_PRIVATE_KEY')
@@ -340,4 +334,3 @@ SWAGGER_SETTINGS = {
     },
     'USE_SESSION_AUTH': False,
 }
-

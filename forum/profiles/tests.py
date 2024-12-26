@@ -1,14 +1,12 @@
-
-from django.test import TestCase
-from rest_framework.test import APITestCase
-from .models import InvestorProfile, StartupProfile
-from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.test import TestCase
+from django.urls import reverse
 from rest_framework import status
+from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
-from .serializers import InvestorProfileSerializer
-from rest_framework import status
 
+from .models import InvestorProfile, StartupProfile
+from .serializers import InvestorProfileSerializer
 
 User = get_user_model()
 
@@ -20,7 +18,6 @@ class InvestorProfileTest(TestCase):
         )
 
     def test_profile_creation(self):
-
         profile = InvestorProfile.objects.create(
             user=self.user,
             country="Ukraine",
@@ -339,10 +336,9 @@ class InvestorProfileOwnershipTest(APITestCase):
         User.objects.all().delete()
         super().tearDown()
 
-        
+
 class ProfileTestCase(APITestCase):
     def setUp(self):
-
         # Creating users. User1 is startup owner.
         self.user1 = User.objects.create_user(password='password1', email='user1@email.com')
         self.user2 = User.objects.create_user(password='password2', email='user2@email.com')
@@ -365,7 +361,6 @@ class ProfileTestCase(APITestCase):
             email='random@email.com',
             description='Some description',
         )
-
     def get_jwt_token(self, user):
         """Helper method to create a JWT token for a user."""
         refresh = RefreshToken.for_user(user)
@@ -557,7 +552,6 @@ class ProfileTestCase(APITestCase):
 
 class SaveProfileTestCase(APITestCase):
     def setUp(self):
-
         # Creating users. User1 is startup owner. User 2 is investor
         self.user1 = User.objects.create_user(password='password1', email='user1@email.com')
         self.user2 = User.objects.create_user(password='password2', email='user2@email.com')
