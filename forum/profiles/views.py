@@ -11,6 +11,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import InvestorProfile, StartupProfile
 from .serializers import InvestorProfileSerializer, StartupProfileSerializer
 from .permissions import IsOwnerOrReadOnly
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 
 class InvestorViewSet(ModelViewSet):
@@ -63,6 +65,36 @@ class SaveStartupViewSet(ListModelMixin, GenericViewSet):
             return Serializer
         return super().get_serializer_class()
 
+    @swagger_auto_schema(
+        tags=['Save Follow Startups'],
+        manual_parameters=[
+            openapi.Parameter(
+                'industry', openapi.IN_QUERY,
+                description="Filter by industry",
+                type=openapi.TYPE_STRING
+            ),
+            openapi.Parameter(
+                'country', openapi.IN_QUERY,
+                description="Filter by country",
+                type=openapi.TYPE_STRING
+            ),
+            openapi.Parameter(
+                'city', openapi.IN_QUERY,
+                description="Filter by city",
+                type=openapi.TYPE_STRING
+            ),
+            openapi.Parameter(
+                'size', openapi.IN_QUERY,
+                description="Filter by size",
+                type=openapi.TYPE_STRING
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        """Retrieve a list of followed startups"""
+        return super().list(request, *args, **kwargs)
+
+    @swagger_auto_schema(tags=['Save Follow Startups'])
     @action(detail=True, methods=['post'], url_path='save-favorite', url_name='save-favorite')
     def save_startup(self, request, pk):
         """Add a startup to the user's favourites"""
@@ -73,6 +105,7 @@ class SaveStartupViewSet(ListModelMixin, GenericViewSet):
         startup.followers.add(investor)
         return Response({'detail': 'Startup is saved'}, status=status.HTTP_200_OK)
 
+    @swagger_auto_schema(tags=['Save Follow Startups'])
     @action(detail=True, methods=['delete'], url_path='delete-favorite', url_name='delete-favorite')
     def delete_favorite(self, request, pk):
         """Remove startup from favorites"""
