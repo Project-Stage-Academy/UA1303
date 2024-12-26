@@ -14,6 +14,7 @@ class NotificationPreferenceSerializer(serializers.ModelSerializer):
     Serializer for reading user's notification preferences.
     """
     allowed_notification_types = serializers.SerializerMethodField()
+    user = serializers.ReadOnlyField(source='user.username')
 
     class Meta:
         model = NotificationPreference

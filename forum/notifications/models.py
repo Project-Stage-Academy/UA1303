@@ -4,10 +4,10 @@ from django.contrib.auth.models import User
 
 class NotificationType(models.Model):
     name = models.CharField(max_length=100, unique=True)
-    description = models.TextField()
+    description = models.TextField(blank=True)
 
     def __str__(self):
-        return self.name
+        return f"Preferences for {self.user.username if self.user else 'Unknown User'}"
 
 
 class NotificationPreference(models.Model):
