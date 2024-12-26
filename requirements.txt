@@ -65,3 +65,4 @@ urllib3==2.2.3
 whitenoise==6.8.2
 zope.interface==7.2
 channels_redis==4.2.1
+selenium==4.27.1
