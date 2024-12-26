@@ -653,6 +653,7 @@ class SaveProfileTestCase(APITestCase):
         unsave_url = reverse(self.unsave_startup_url, kwargs={'pk': self.startup1.pk})
         response = self.client.delete(unsave_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(self.startup1.followers.filter(pk=self.user2.pk).exists())
 
     def test_delete_not_existing_favorite_startup(self):
         """Test removing startup that not exists from saved favorites"""
@@ -660,6 +661,14 @@ class SaveProfileTestCase(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def tearDown(self):
+        del self.token_user1
+        del self.token_user2
+        InvestorProfile.objects.all().delete()
+        StartupProfile.objects.all().delete()
+        User.objects.all().delete()
+        super().tearDown()
 
 
 class ListSavedProfilesTestCase(APITestCase):
@@ -739,62 +748,89 @@ class ListSavedProfilesTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
 
-    def search_and_assert(self, search_query, expected_count: int):
+    def search_and_assert(self, search_query, search_field: str, expected_count: int):
         """Helper method to perform search and assert results."""
         url = reverse(self.get_saved_startups_url) + f'?search={search_query}'
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user3}')
         response = self.client.get(url)
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), expected_count)
+        for item in response.data:
+            self.assertIn(search_query, item[search_field])
 
-    def filter_and_assert(self, search_query, filter_field: str, expected_count: int):
+    def filter_and_assert(self, filter_queries: dict, expected_count: int):
         """Helper method to perform filter and assert results."""
-        url = reverse(self.get_saved_startups_url) + f'?{filter_field}={search_query}'
+        query_params = '&'.join([f'{field}={value}' for field, value in filter_queries.items()])
+        url = reverse(self.get_saved_startups_url) + '?' + query_params
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user3}')
         response = self.client.get(url)
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), expected_count)
+        if expected_count > 0:
+            for item in response.data:
+                for field, search_query in filter_queries.items():
+                    self.assertEqual(search_query, item.get(field))
 
     def test_get_followed_startups_name_search(self):
         """Test search by name"""
         search_query = self.startup1_name[0:-2]
-        self.search_and_assert(search_query, 1)
+        search_field = 'company_name'
+        self.search_and_assert(search_query, search_field, 1)
 
     def test_get_followed_startups_industry_search(self):
         """Test search by industry"""
         search_query = self.startup1_industry[0:-2]
-        self.search_and_assert(search_query, 1)
+        search_field = 'industry'
+        self.search_and_assert(search_query, search_field, 1)
 
     def test_get_followed_startups_country_search(self):
         """Test search by country"""
         search_query = self.startup1_country[0:-2]
-        self.search_and_assert(search_query, 1)
+        search_field = 'country'
+        self.search_and_assert(search_query, search_field, 1)
 
     def test_get_followed_startups_city_search(self):
         """Test search by city"""
         search_query = self.startup1_city[0:-2]
-        self.search_and_assert(search_query, 1)
+        search_field = 'city'
+        self.search_and_assert(search_query, search_field, 1)
 
     def test_get_followed_startups_industry_filter(self):
         """Test filter by industry"""
-        search_query = self.startup1_industry
-        filter_field = 'industry'
-        self.filter_and_assert(search_query, filter_field, 1)
+        search_query = {'industry': self.startup1_industry}
+        self.filter_and_assert(search_query, 1)
 
     def test_get_followed_startups_country_filter(self):
         """Test filter by country"""
-        search_query = self.startup1_country
-        filter_field = 'country'
-        self.filter_and_assert(search_query, filter_field, 1)
+        search_query = {'country': self.startup1_country}
+        self.filter_and_assert(search_query, 1)
 
     def test_get_followed_startups_city_filter(self):
         """Test filter by city"""
-        search_query = self.startup1_city
-        filter_field = 'city'
-        self.filter_and_assert(search_query, filter_field, 1)
+        search_query = {'city': self.startup1_city}
+        self.filter_and_assert(search_query, 1)
 
     def test_get_followed_startups_size_filter(self):
         """Test filter by size"""
-        search_query = self.startup1_size
-        filter_field = 'size'
-        self.filter_and_assert(search_query, filter_field, 1)
+        search_query = {'size': self.startup1_size}
+        self.filter_and_assert(search_query, 1)
+
+    def test_get_followed_startups_multiple_filters_positive(self):
+        """Test multiple filters in one request"""
+        search_query = {'country': self.startup1_country, 'industry': self.startup1_industry}
+        self.filter_and_assert(search_query, 1)
+
+    def test_get_followed_startups_multiple_filters_negative(self):
+        """Test multiple filters in one request"""
+        search_query = {'country': self.startup1_country, 'industry': 'abc'}
+        self.filter_and_assert(search_query, 0)
+
+    def tearDown(self):
+        del self.token_user3
+        self.investor.followed_startups.remove(self.startup1, self.startup2)
+        InvestorProfile.objects.all().delete()
+        StartupProfile.objects.all().delete()
+        User.objects.all().delete()
+        super().tearDown()
