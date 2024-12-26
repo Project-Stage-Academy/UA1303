@@ -6,9 +6,14 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 
-from .models import NotificationType, NotificationPreference
+from .models import (
+    NotificationType,
+    NotificationPreference,
+    NotificationCategory
+)
 from .serializers import (
     NotificationTypeSerializer,
+    NotificationCategorySerializer,
     NotificationPreferenceSerializer,
     NotificationPreferenceUpdateSerializer
 )
@@ -25,6 +30,10 @@ NOTIFICATION_TYPES_RESPONSES = {
     200: openapi.Response(description="Successful operation", schema=NotificationTypeSerializer(many=True)),
 }
 
+NOTIFICATION_CATEGORIES_RESPONSES = {
+    200: openapi.Response(description="Successful operation", schema=NotificationCategorySerializer(many=True)),
+}
+
 
 class NotificationTypeView(APIView):
     """
@@ -37,6 +46,20 @@ class NotificationTypeView(APIView):
     def get(self, request):
         notification_types = NotificationType.objects.all()
         serializer = NotificationTypeSerializer(notification_types, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+class NotificationCategoryView(APIView):
+    """
+    To get all possible Notification Categories
+    """
+    @swagger_auto_schema(
+        operation_description="Get all notification categories.",
+        responses=NOTIFICATION_CATEGORIES_RESPONSES,
+    )
+    def get(self, request):
+        notification_categories = NotificationCategory.objects.all()
+        serializer = NotificationCategorySerializer(notification_categories, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -78,7 +101,7 @@ class NotificationPreferenceView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request):        
-        preferences = NotificationPreference.objects.get(user=request.user)
+        preferences = self.get_preference(request.user)
         if preferences:
             preferences.delete()
             logger.info(f"Preferences deleted for user {request.user.email}")
