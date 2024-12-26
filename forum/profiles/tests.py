@@ -647,7 +647,7 @@ class ListSavedProfilesTestCase(APITestCase):
         self.startup1_country = 'United Kingdom'
         self.startup1_city = 'Los Angeles'
 
-        # Creating users and their profiles
+        # Creating users and their startup profiles
         self.user1 = User.objects.create_user(password='password1', email='user1@email.com')
         self.startup1 = StartupProfile.objects.create(
             user=self.user1,
@@ -676,20 +676,21 @@ class ListSavedProfilesTestCase(APITestCase):
             email='randdsaom@email.com',
             description='Some description',
         )
+
         # 3rd user will be acting as investor
         self.user3 = User.objects.create_user(password='password3', email='user3@email.com')
-
         self.investor = InvestorProfile.objects.create(
             user=self.user3,
             country="Ukraine",
             phone="+380631234455",
             email="testca3se@gmail.com",
         )
-        # Adding favourite startups
+
+        # Adding startups to favourites
         startups = [self.startup1, self.startup2]
         self.investor.followed_startups.add(*startups)
 
-        # Generating token
+        # Generating user's access token
         self.token_user3 = self.get_jwt_token(self.user3)
 
     def get_jwt_token(self, user):
@@ -711,7 +712,7 @@ class ListSavedProfilesTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
 
-    def search_and_assert(self, search_query, expected_count):
+    def search_and_assert(self, search_query, expected_count: int):
         """Helper method to perform search and assert results."""
         url = reverse(self.get_saved_startups_url) + f'?search={search_query}'
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user3}')
@@ -719,7 +720,7 @@ class ListSavedProfilesTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), expected_count)
 
-    def filter_and_assert(self, search_query, filter_field, expected_count):
+    def filter_and_assert(self, search_query, filter_field: str, expected_count: int):
         """Helper method to perform filter and assert results."""
         url = reverse(self.get_saved_startups_url) + f'?{filter_field}={search_query}'
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user3}')

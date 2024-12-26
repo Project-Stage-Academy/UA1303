@@ -4,10 +4,14 @@ from rest_framework.viewsets import ModelViewSet, GenericViewSet
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.serializers import Serializer
 from django.shortcuts import get_object_or_404
+from rest_framework.filters import SearchFilter, OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
 from .models import InvestorProfile, StartupProfile
 from .serializers import InvestorProfileSerializer, StartupProfileSerializer
 from .permissions import IsOwnerOrReadOnly
+
 
 class InvestorViewSet(ModelViewSet):
 
@@ -41,6 +45,8 @@ class SaveStartupViewSet(ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = StartupProfileSerializer
 
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+
     search_fields = ['company_name', 'industry', 'country', 'city']
     filterset_fields = ['industry', 'country', 'city', 'size']
     ordering_fields = ['company_name', 'created_at']
@@ -50,6 +56,12 @@ class SaveStartupViewSet(ListModelMixin, GenericViewSet):
         if self.request.user.is_authenticated:
             investor = get_object_or_404(InvestorProfile, user=self.request.user)
             return investor.followed_startups.all()
+
+    def get_serializer_class(self):
+        """Returns the appropriate serializer class based on the action"""
+        if self.action == 'save_startup':
+            return Serializer
+        return super().get_serializer_class()
 
     @action(detail=True, methods=['post'], url_path='save', url_name='save')
     def save_startup(self, request, pk):
