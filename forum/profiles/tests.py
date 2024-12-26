@@ -557,7 +557,8 @@ class ProfileTestCase(APITestCase):
 
 class SaveProfileTestCase(APITestCase):
 
-    save_startup_url = 'profiles:startups-save'
+    save_startup_url = 'profiles:startups-save-favorite'
+    unsave_startup_url = 'profiles:startups-delete-favorite'
 
     def setUp(self):
 
@@ -633,6 +634,32 @@ class SaveProfileTestCase(APITestCase):
         self.client.post(url)
         response2 = self.client.post(url)
         self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_delete_favorite_startup_anonymous(self):
+        """Test that anonymous user has no access to the endpoint"""
+        url = reverse(self.unsave_startup_url, kwargs={'pk': self.startup1.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_favorite_startup(self):
+        """Test removing startup from saved favorites"""
+
+        # Saving startup first
+        save_url = reverse(self.save_startup_url, kwargs={'pk': self.startup1.pk})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
+        save_response = self.client.post(save_url)
+
+        # Unsaving startup
+        unsave_url = reverse(self.unsave_startup_url, kwargs={'pk': self.startup1.pk})
+        response = self.client.delete(unsave_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_delete_not_existing_favorite_startup(self):
+        """Test removing startup that not exists from saved favorites"""
+        url = reverse(self.unsave_startup_url, kwargs={'pk': self.startup1.pk})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
 class ListSavedProfilesTestCase(APITestCase):
@@ -771,6 +798,3 @@ class ListSavedProfilesTestCase(APITestCase):
         search_query = self.startup1_size
         filter_field = 'size'
         self.filter_and_assert(search_query, filter_field, 1)
-
-
-

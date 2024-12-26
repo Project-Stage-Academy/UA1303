@@ -59,11 +59,11 @@ class SaveStartupViewSet(ListModelMixin, GenericViewSet):
 
     def get_serializer_class(self):
         """Returns the appropriate serializer class based on the action"""
-        if self.action == 'save_startup':
+        if self.action == 'save_startup' or self.action == 'delete_favorite':
             return Serializer
         return super().get_serializer_class()
 
-    @action(detail=True, methods=['post'], url_path='save', url_name='save')
+    @action(detail=True, methods=['post'], url_path='save-favorite', url_name='save-favorite')
     def save_startup(self, request, pk):
         """Add a startup to the user's favourites"""
         investor = get_object_or_404(InvestorProfile, user=request.user)
@@ -72,3 +72,13 @@ class SaveStartupViewSet(ListModelMixin, GenericViewSet):
             return Response({'detail': 'Startup is already followed'}, status=status.HTTP_400_BAD_REQUEST)
         startup.followers.add(investor)
         return Response({'detail': 'Startup is saved'}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['delete'], url_path='delete-favorite', url_name='delete-favorite')
+    def delete_favorite(self, request, pk):
+        """Remove startup from favorites"""
+        investor = get_object_or_404(InvestorProfile, user=request.user)
+        startup = get_object_or_404(StartupProfile, pk=pk)
+        if not startup.followers.filter(pk=investor.pk).exists():
+            return Response({'detail': 'Startup is not in favourites'}, status=status.HTTP_400_BAD_REQUEST)
+        startup.followers.remove(investor)
+        return Response({'detail': 'Startup has been removed'}, status=status.HTTP_200_OK)
