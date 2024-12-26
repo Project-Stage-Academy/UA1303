@@ -313,31 +313,3 @@ RATE_LIMIT_KEY = "ip"
 RATE_LIMIT_RATE = "5/m"
 RATE_LIMIT_BLOCK = True
 DOMAIN_NAME = os.getenv("DOMAIN_NAME", "localhost")
-
-# Swagger settings to enable JWT authorization
-SWAGGER_SETTINGS = {
-    'SECURITY_DEFINITIONS': {
-        'Bearer': {
-            'type': 'apiKey',
-            'name': 'Authorization',
-            'in': 'header',
-            'description': 'Enter: "Bearer <JWT token>"',
-        }
-    },
-    'USE_SESSION_AUTH': False,
-}
-
-# Swagger settings to enable JWT authorization
-
-SWAGGER_SETTINGS = {
-    'SECURITY_DEFINITIONS': {
-        'Bearer': {
-            'type': 'apiKey',
-            'name': 'Authorization',
-            'in': 'header',
-            'description': 'Enter: "Bearer <JWT token>"',
-        }
-    },
-    'USE_SESSION_AUTH': False,
-}
-
