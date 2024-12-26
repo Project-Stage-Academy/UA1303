@@ -361,7 +361,6 @@ class ProfileTestCase(APITestCase):
             email='random@email.com',
             description='Some description',
         )
-
     def get_jwt_token(self, user):
         """Helper method to create a JWT token for a user."""
         refresh = RefreshToken.for_user(user)
