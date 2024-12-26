@@ -259,6 +259,41 @@ class TestCustomTokenObtainPairSerializer(APITestCase):
 
         self.assertEqual(access_token["role"], Role.INVESTOR.value)
     
+    def test_token_issued_for_role_user_does_not_possess(self):
+        """Test that a token is issued even when the user requests a role they don't possess."""
+        # Define test cases: (current_user_role, requested_role)
+        test_cases = [
+            (Role.UNASSIGNED, Role.INVESTOR),  # Unassigned user requests investor token
+            (Role.UNASSIGNED, Role.STARTUP),  # Unassigned user requests startup token
+            (Role.INVESTOR, Role.STARTUP),    # Investor user requests startup token
+            (Role.STARTUP, Role.INVESTOR),    # Startup user requests investor token
+        ]
+
+        for user_role, requested_role in test_cases:
+            with self.subTest(current_role=user_role, requested_role=requested_role):
+                # Update user's database role
+                self.user.role = user_role.value
+                self.user.save()
+
+                # Request token for a different role
+                request_data = {
+                    "email": self.user.email,
+                    "password": "securepassword",
+                    "role": requested_role.value,
+                }
+                context = {"request": self._get_mock_request(request_data)}
+
+                serializer = CustomTokenObtainPairSerializer(context=context)
+                validated_data = serializer.validate(request_data)
+
+                # Extract the issued token
+                refresh_token = RefreshToken(validated_data["refresh"])
+
+                # Assert the token is issued successfully
+                self.assertEqual(refresh_token["role"], requested_role.value)
+                self.assertNotEqual(refresh_token["role"], user_role.value)  # Ensure it reflects the requested role
+
+    
     def test_empty_request_payload(self):
         """Test that an empty request payload raises a ValidationError."""
         request_data = {}
