@@ -1,6 +1,11 @@
 # Forum-Project-Stage-CC
 Forum Project Stage CC Template Repo
 
+**Run project locally using docker:**
+1. Navigate to main directory that contains docker-compose file
+2. Make sure you're using "db" as database host
+3. run `docker-compose up --build`
+
 **Project Vision Statement:**
 
 *"Empowering Innovation: Bridging Startups and Investors for Ukraine's Economic Growth"*

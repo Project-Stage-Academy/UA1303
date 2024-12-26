@@ -13,6 +13,7 @@ if not os.getenv('VIRTUAL_ENV'):
 else:
     print("Virtual environmet activated")
 
+
 def check_database_connection():
     """Перевірка з'єднання з базою даних."""
     try:
@@ -28,7 +29,6 @@ def check_database_connection():
     except Exception as e:
         print("Database connection error:", e)
         exit(1)  
-
 
 
 def main():

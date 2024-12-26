@@ -1,9 +1,21 @@
-from .models import CustomUser, Role
+from rest_framework import serializers
 from django.core.validators import validate_email
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.contrib.auth.models import User
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework import serializers, exceptions
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from .models import CustomUser, Role
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        if not User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("This email is not registered.")
+        return value
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
@@ -75,6 +87,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
 VALID_TOKEN_ROLES = [Role.STARTUP, Role.INVESTOR]
 
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     role = serializers.ChoiceField(choices=[(role.value, role.name.lower()) for role in VALID_TOKEN_ROLES])
     
@@ -99,5 +112,32 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         data['access'] = str(refresh.access_token)
         data['refresh'] = str(refresh)
+
+        return data
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField(required=True)
+
+    def validate(self, data):
+        request = self.context.get('request')
+        auth_header = request.headers.get('Authorization', '')
+        access_token = auth_header.split()[1]
+        refresh_token = data.get('refresh')
+        
+        try:
+            decoded_access_token = AccessToken(access_token)
+            user_id_from_access = decoded_access_token['user_id']
+        except Exception as e:
+            raise serializers.ValidationError({"access token error": str(e)})
+
+        try:
+            decoded_refresh_token = RefreshToken(refresh_token)
+            user_id_from_refresh = decoded_refresh_token['user_id']
+        except Exception as e:
+            raise serializers.ValidationError({"refresh token error": str(e)})
+
+        if user_id_from_access != user_id_from_refresh:
+            raise serializers.ValidationError({"error": "User ID mismatch between tokens."})
 
         return data
