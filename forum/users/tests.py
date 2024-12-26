@@ -88,6 +88,12 @@ class CustomUserValidatorTest(TestCase):
 
 
 class TestBaseRolePermission(APITestCase):
+    def _setup_mock_token_and_user(self, role: Role):
+        """Helper to set up mock token and user with the specified role.
+        Takes user role value (e.g. `Role.STARTUP.value`)"""
+        self.mock_user.role = role.value
+        self.mock_token.get = Mock(return_value=role.value)
+    
     def setUp(self):
         # Create mock user and token
         self.mock_user = Mock()
@@ -118,8 +124,25 @@ class TestBaseRolePermission(APITestCase):
         for permission_class in [IsInvestor, IsStartup]:
             with self.subTest(permission=permission_class):
                 permission = permission_class()
-                with self.assertRaises(PermissionDenied):
+                with self.assertRaises(PermissionDenied) as exc:
                     permission.has_permission(self.mock_request, self.mock_view)
+                
+                self.assertEqual(exc.exception.detail, "User instance doesn't have role attribute")
+    
+    def test_token_missing_role_attribute(self):
+        """Test that a token missing the 'role' attribute raises PermissionDenied."""
+        # Setup mock token without the 'role' attribute
+        self.mock_token.get = Mock(return_value=None)  # Simulate no 'role' attribute
+        self.mock_request.auth = self.mock_token
+
+        for permission_class in [IsInvestor, IsStartup]:
+            with self.subTest(permission=permission_class):
+                permission = permission_class()
+                with self.assertRaises(PermissionDenied) as exc:
+                    permission.has_permission(self.mock_request, self.mock_view)
+
+                self.assertEqual(exc.exception.detail, "Token doesn't have role attribute")
+
 
     def test_correct_role_grants_access(self):
         """Test that users with the correct role are granted access."""
@@ -130,12 +153,21 @@ class TestBaseRolePermission(APITestCase):
         ]
         for user_role, permission_class in test_cases:
             with self.subTest(role=user_role, permission=permission_class):
-                self.mock_user.role = user_role.value
-                self.mock_token.get = Mock(return_value=user_role.value)  # Align token role
+                self._setup_mock_token_and_user(user_role)
 
                 permission = permission_class()
                 has_permission = permission.has_permission(self.mock_request, self.mock_view)
                 self.assertTrue(has_permission)
+    
+    def test_unassigned_role_denies_access(self):
+        """Test that users with the Role.UNASSIGNED role are denied access."""
+        self._setup_mock_token_and_user(Role.UNASSIGNED)
+
+        for permission_class in [IsInvestor, IsStartup]:
+            with self.subTest(permission=permission_class):
+                permission = permission_class()
+                has_permission = permission.has_permission(self.mock_request, self.mock_view)
+                self.assertFalse(has_permission)
 
     def test_incorrect_role_denies_access(self):
         """Test that users with an incorrect role are denied access."""
@@ -145,8 +177,7 @@ class TestBaseRolePermission(APITestCase):
         ]
         for user_role, permission_class in test_cases:
             with self.subTest(role=user_role, permission=permission_class):
-                self.mock_user.role = user_role.value
-                self.mock_token.get = Mock(return_value=user_role.value)  # Align token role
+                self._setup_mock_token_and_user(user_role)
 
                 permission = permission_class()
                 has_permission = permission.has_permission(self.mock_request, self.mock_view)
@@ -159,8 +190,10 @@ class TestBaseRolePermission(APITestCase):
         for permission_class in [IsInvestor, IsStartup]:
             with self.subTest(permission=permission_class):
                 permission = permission_class()
-                with self.assertRaises(PermissionDenied):
+                with self.assertRaises(PermissionDenied) as exc:
                     permission.has_permission(self.mock_request, self.mock_view)
+                
+                self.assertEqual(exc.exception.detail, "Authentication failed: missing or invalid JWT.")
 
 
 User = get_user_model()
@@ -188,27 +221,30 @@ class TestCustomTokenObtainPairSerializer(APITestCase):
 
         self.assertEqual(refresh_token["role"], Role.STARTUP.value)
 
-    def test_missing_role(self):
-        """Test that a missing role raises a ValidationError."""
-        request_data = {"email": self.user.email, "password": "securepassword"}  # No role provided
-        context = {"request": self._get_mock_request(request_data)}
-
-        serializer = CustomTokenObtainPairSerializer(context=context)
-        with self.assertRaises(exceptions.ValidationError):
-            serializer.validate(request_data)
-
-        # self.assertIn("role", exc.exception)
-
     def test_invalid_role(self):
         """Test that an invalid role raises a ValidationError."""
         request_data = {"email": self.user.email, "password": "securepassword", "role": 9999}  # Invalid role
         context = {"request": self._get_mock_request(request_data)}
 
         serializer = CustomTokenObtainPairSerializer(context=context)
-        with self.assertRaises(exceptions.ValidationError):
+        with self.assertRaises(exceptions.ValidationError) as exc:
             serializer.validate(request_data)
 
-        # self.assertIn("role", exc.exception)
+        self.assertIn("role", exc.exception.detail)
+        self.assertEqual(exc.exception.detail["role"], "Invalid role specified.")
+
+    def test_missing_role(self):
+        """Test that a missing role raises a ValidationError."""
+        request_data = {"email": self.user.email, "password": "securepassword"}  # No role provided
+        context = {"request": self._get_mock_request(request_data)}
+
+        serializer = CustomTokenObtainPairSerializer(context=context)
+        with self.assertRaises(exceptions.ValidationError) as exc:
+            serializer.validate(request_data)
+
+        self.assertIn("role", exc.exception.detail)
+        self.assertEqual(exc.exception.detail["role"], "This field is required.")
+
 
     def test_role_added_to_access_token(self):
         """Test that the role is correctly added to the access token."""
@@ -222,6 +258,18 @@ class TestCustomTokenObtainPairSerializer(APITestCase):
         access_token = RefreshToken(validated_data["refresh"]).access_token
 
         self.assertEqual(access_token["role"], Role.INVESTOR.value)
+    
+    def test_empty_request_payload(self):
+        """Test that an empty request payload raises a ValidationError."""
+        request_data = {}
+        context = {"request": self._get_mock_request(request_data)}
+
+        serializer = CustomTokenObtainPairSerializer(data=request_data, context=context)
+        
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("email", serializer.errors)
+        self.assertIn("password", serializer.errors)
+        self.assertIn("role", serializer.errors)
 
     def _get_mock_request(self, data):
         """Helper method to create a mock request object with given data."""

@@ -22,7 +22,7 @@ class BaseRolePermission(BasePermission):
             return False
 
         if not isinstance(request.auth, AccessToken) or request.auth is None:
-            raise PermissionDenied("Something is wrong with auth: user's probably not using JWT or another problem")
+            raise PermissionDenied("Authentication failed: missing or invalid JWT.")
 
         token_role = request.auth.get('role')
 
