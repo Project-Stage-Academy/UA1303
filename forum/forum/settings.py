@@ -346,10 +346,7 @@ SWAGGER_SETTINGS = {
 # Daphne
 ASGI_APPLICATION = "forum.asgi.application"
 CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [("localhost", 6379)],
-        },
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
     },
 }
