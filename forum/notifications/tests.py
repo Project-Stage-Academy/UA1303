@@ -1,5 +1,5 @@
 from django.test import TestCase
-from django.contrib.auth.models import User
+from users.models import CustomUser
 from .models import NotificationType, NotificationPreference
 from .serializers import (
     NotificationTypeSerializer,
@@ -10,7 +10,7 @@ from .serializers import (
 
 class NotificationModelTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='testuser', password='password')
+        self.user = CustomUser.objects.create_user(email='test@user.com', password='password')
         self.notification_type = NotificationType.objects.create(
             name="email", description="Email notifications"
         )
@@ -22,14 +22,14 @@ class NotificationModelTests(TestCase):
         self.assertEqual(self.notification_type.description, "Email notifications")
 
     def test_notification_preference_creation(self):
-        self.assertEqual(self.notification_preference.user.username, "testuser")
+        self.assertEqual(self.notification_preference.user.email, "test@user.com")
         self.assertEqual(self.notification_preference.allowed_notification_types.count(), 1)
         self.assertEqual(self.notification_preference.allowed_notification_types.first().name, "email")
 
 
 class NotificationSerializerTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='testuser', password='password')
+        self.user = CustomUser.objects.create_user(email='test@user.com', password='password')
         self.notification_type = NotificationType.objects.create(
             name="email", description="Email notifications"
         )
