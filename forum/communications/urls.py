@@ -1,8 +1,10 @@
 from django.urls import path
-from .views import index
 
-app_name = 'communications'
+from . import views
+
+app_name = "communications"
 
 urlpatterns = [
-    path("", index, name="index"),
+    path("", views.index, name="index"),
+    path("<str:room_name>/", views.room, name="room"),
 ]
