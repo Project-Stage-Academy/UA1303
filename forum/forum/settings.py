@@ -228,6 +228,7 @@ LOGGING = {
         'django': {
             'handlers': ['console', 'forum_file'],
             'level': 'WARNING',
+            'propagate': False,
         },
         'django.db.backends': {
             'handlers': ['console', 'database_file'],
