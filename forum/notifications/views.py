@@ -53,10 +53,10 @@ class NotificationPreferenceView(APIView):
     def get(self, request):
         preferences = NotificationPreference.objects.filter(user=request.user).first()
         if preferences:
-            logger.info(f"Preferences retrieved for user {request.user.username}")
+            logger.info(f"Preferences retrieved for user {request.user.email}")
             serializer = NotificationPreferenceSerializer(preferences)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        logger.warning(f"No preferences found for user {request.user.username}")
+        logger.warning(f"No preferences found for user {request.user.email}")
         return Response({"detail": "Notification preferences not set."}, status=status.HTTP_404_NOT_FOUND)
 
     @swagger_auto_schema(
@@ -72,16 +72,16 @@ class NotificationPreferenceView(APIView):
         serializer = NotificationPreferenceUpdateSerializer(preferences, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            logger.info(f"Preferences updated for user {request.user.username}")
+            logger.info(f"Preferences updated for user {request.user.email}")
             return Response({"detail": "Notification preferences updated successfully."}, status=status.HTTP_200_OK)
-        logger.error(f"Invalid data provided for user {request.user.username}: {serializer.errors}")
+        logger.error(f"Invalid data provided for user {request.user.email}: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request):
-        preferences = self.get_preference(request.user)
+    def delete(self, request):        
+        preferences = NotificationPreference.objects.get(user=request.user)
         if preferences:
             preferences.delete()
-            logger.info(f"Preferences deleted for user {request.user.username}")
+            logger.info(f"Preferences deleted for user {request.user.email}")
             return Response({"detail": "Notification preferences deleted successfully."}, status=status.HTTP_200_OK)
-        logger.warning(f"Attempted to delete preferences for non-existent user {request.user.username}")
+        logger.warning(f"Attempted to delete preferences for non-existent user {request.user.email}")
         return Response({"detail": "Notification preferences not set."}, status=status.HTTP_404_NOT_FOUND)
