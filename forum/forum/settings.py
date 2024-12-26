@@ -205,7 +205,7 @@ LOGGING = {
             'style': '{',
         },
         'simple': {
-            'format': '{levelname} {message}',
+            'format': '{levelname} {name} {message}',
             'style': '{',
         },
     },
@@ -222,6 +222,7 @@ LOGGING = {
             'when': 'midnight',
             'backupCount': 7,
             'formatter': 'verbose',
+            'delay': True,
         },
         'database_file': {
             'level': 'INFO',
@@ -230,19 +231,20 @@ LOGGING = {
             'when': 'midnight',
             'backupCount': 7,
             'formatter': 'verbose',
+            'delay': True,
         },
     },
     'loggers': {
         'django': {
             'handlers': ['console', 'forum_file'],
-            'level': 'INFO',
+            'level': 'WARNING',
         },
         'django.db.backends': {
             'handlers': ['console', 'database_file'],
             'level': 'INFO',
             'propagate': False,
         },
-        'app': {
+        '': {
             'handlers': ['console', 'forum_file'],
             'level': 'DEBUG',
             'propagate': True,
@@ -253,8 +255,8 @@ LOGGING = {
 # JWT settings
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=20),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': False,
@@ -268,6 +270,37 @@ SIMPLE_JWT = {
     'LEEWAY': 0,
 
     'AUTH_HEADER_TYPES': ('JWT', 'Bearer'),
+}
+
+
+AUTH_USER_MODEL = 'users.CustomUser'
+RECAPTCHA_PUBLIC_KEY = env('RECAPTCHA_PUBLIC_KEY')
+RECAPTCHA_PRIVATE_KEY = env('RECAPTCHA_PRIVATE_KEY')
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = env('EMAIL_HOST')
+EMAIL_PORT = env.int('EMAIL_PORT')
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS')
+EMAIL_HOST_USER = env('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
+
+RATE_LIMIT_KEY = "ip"
+RATE_LIMIT_RATE = "5/m"
+RATE_LIMIT_BLOCK = True
+DOMAIN_NAME = os.getenv("DOMAIN_NAME", "localhost")
+
+# Swagger settings to enable JWT authorization
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'Enter: "Bearer <JWT token>"',
+        }
+    },
+    'USE_SESSION_AUTH': False,
 }
 
 RECAPTCHA_PUBLIC_KEY = env('RECAPTCHA_PUBLIC_KEY')
@@ -298,3 +331,18 @@ SWAGGER_SETTINGS = {
     },
     'USE_SESSION_AUTH': False,
 }
+
+# Swagger settings to enable JWT authorization
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'Enter: "Bearer <JWT token>"',
+        }
+    },
+    'USE_SESSION_AUTH': False,
+}
+

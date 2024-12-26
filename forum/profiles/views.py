@@ -1,7 +1,13 @@
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.serializers import Serializer
+from rest_framework.viewsets import GenericViewSet
 from rest_framework.viewsets import ModelViewSet
 
 from .models import InvestorProfile
@@ -20,9 +26,11 @@ class InvestorViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
     def get_queryset(self):
-        return InvestorProfile.objects.filter(user=self.request.user).select_related(
-            "user"
-        )
+        if self.request.user.is_authenticated:
+            return InvestorProfile.objects.filter(user=self.request.user).select_related(
+                "user"
+            )
+        return InvestorProfile.objects.none()
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -71,3 +79,19 @@ class StartupProfileViewSet(ModelViewSet):
         Handles GET requests for listing startup profiles.
         """
         return super().list(request, *args, **kwargs)
+
+
+class SaveStartupViewSet(GenericViewSet):
+    """Adds startup to user's favourites"""
+    permission_classes = [IsAuthenticated]
+    serializer_class = Serializer
+    queryset = StartupProfile.objects.all()
+
+    @action(detail=True, methods=['post'], url_path='save', url_name='save')
+    def post(self, request, pk):
+        investor = get_object_or_404(InvestorProfile, user=request.user)
+        startup = get_object_or_404(StartupProfile, pk=pk)
+        if startup.followers.filter(pk=investor.pk).exists():
+            return Response({'detail': 'Startup is already followed'}, status=status.HTTP_400_BAD_REQUEST)
+        startup.followers.add(investor)
+        return Response({'detail': 'Startup is saved'}, status=status.HTTP_200_OK)

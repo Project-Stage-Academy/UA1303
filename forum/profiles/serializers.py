@@ -1,9 +1,9 @@
-from rest_framework import serializers
-from .models import StartupProfile, InvestorProfile
-from projects.serializers import ProjectSerializer
-from rest_framework.exceptions import ValidationError
-from django.core.validators import validate_email
 from django.contrib.auth import get_user_model
+from projects.serializers import ProjectSerializer
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
+from .models import StartupProfile, InvestorProfile
 
 User = get_user_model()
 
@@ -31,9 +31,9 @@ class InvestorProfileSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         if (
-            InvestorProfile.objects.filter(email=value)
-            .exclude(pk=self.instance.pk if self.instance else None)
-            .exists()
+                InvestorProfile.objects.filter(email=value)
+                        .exclude(pk=self.instance.pk if self.instance else None)
+                        .exists()
         ):
             raise serializers.ValidationError(
                 "Investor with this email already exists."
@@ -53,7 +53,6 @@ class InvestorProfileSerializer(serializers.ModelSerializer):
         return value
 
 
-
 class StartupProfileSerializer(serializers.ModelSerializer):
     projects = ProjectSerializer(many=True, read_only=True)
 
@@ -67,5 +66,6 @@ class StartupProfileSerializer(serializers.ModelSerializer):
         if user.is_anonymous:
             raise ValidationError('You must be logged in.')
         if self.context['request'].method == 'POST' and StartupProfile.objects.filter(user=user).exists():
-            raise ValidationError("You cannot create multiple startup profiles. Each user is limited to one startup profile.")
+            raise ValidationError(
+                "You cannot create multiple startup profiles. Each user is limited to one startup profile.")
         return data
