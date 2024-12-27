@@ -1,9 +1,9 @@
 from django.forms import ValidationError
 from django.test import TestCase
-from .validators import SpecialCharacterPasswordValidator
+from users.validators import SpecialCharacterPasswordValidator
 from rest_framework.test import APITestCase
 from rest_framework import status
-from .models import CustomUser
+from users.models import CustomUser
 from django.urls import reverse
 
 
