@@ -1,5 +1,8 @@
 from django.db import models
-from users.models import CustomUser
+from django.contrib.auth import get_user_model
+
+
+User = get_user_model()
 
 
 class NotificationType(models.Model):
@@ -18,7 +21,7 @@ class NotificationCategory(models.Model):
         return f"Notification category(name={self.name}, description={self.description}"
 
 class NotificationPreference(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='notification_preferences')
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='notification_preferences')
     allowed_notification_types = models.ManyToManyField(NotificationType, related_name='allowed_users')
     allowed_notification_categories = models.ManyToManyField(NotificationCategory, related_name='allowed_categories')
 

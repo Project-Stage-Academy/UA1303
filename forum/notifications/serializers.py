@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import NotificationType, NotificationCategory, NotificationPreference
-from users.models import CustomUser
+
 
 
 class NotificationTypeSerializer(serializers.ModelSerializer):
