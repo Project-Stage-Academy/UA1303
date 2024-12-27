@@ -10,7 +10,7 @@ class NotificationType(models.Model):
     description = models.TextField(blank=True)
 
     def __str__(self):
-        return f"Notification type(name={self.name}, description={self.description}"
+        return f"Notification type(name={self.name}, description={self.description})"
 
 
 class NotificationCategory(models.Model):
@@ -18,7 +18,7 @@ class NotificationCategory(models.Model):
     description = models.TextField(blank=True)
 
     def __str__(self):
-        return f"Notification category(name={self.name}, description={self.description}"
+        return f"Notification category(name={self.name}, description={self.description})"
 
 class NotificationPreference(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='notification_preferences')
