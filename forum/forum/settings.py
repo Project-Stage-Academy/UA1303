@@ -238,7 +238,7 @@ LOGGING = {
         '': {
             'handlers': ['console', 'forum_file'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
         },
     },
 }
