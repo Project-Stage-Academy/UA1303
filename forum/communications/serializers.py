@@ -5,7 +5,7 @@ from .models import Room, Message
 class ChatRoomSerializer(serializers.ModelSerializer):
     class Meta:
         model = Room
-        fields = ["id", "participants"]
+        fields = ["id", "online"]
 
 
 class MessageSerializer(serializers.ModelSerializer):
