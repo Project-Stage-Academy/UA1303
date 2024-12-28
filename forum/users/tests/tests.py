@@ -84,7 +84,6 @@ class CustomUserValidatorTest(TestCase):
 
 class UserRegistrationTests(APITestCase):
     def setUp(self):
-        CustomUser.objects.all().delete()
         self.register_url = reverse('auth:user-register')
         self.valid_payload = self.create_payload()
 
