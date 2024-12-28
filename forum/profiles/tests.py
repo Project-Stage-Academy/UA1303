@@ -361,6 +361,7 @@ class ProfileTestCase(APITestCase):
             email='random@email.com',
             description='Some description',
         )
+
     def get_jwt_token(self, user):
         """Helper method to create a JWT token for a user."""
         refresh = RefreshToken.for_user(user)
@@ -551,6 +552,10 @@ class ProfileTestCase(APITestCase):
 
 
 class SaveProfileTestCase(APITestCase):
+
+    save_startup_url = 'profiles:startups-save-favorite'
+    unsave_startup_url = 'profiles:startups-delete-favorite'
+
     def setUp(self):
         # Creating users. User1 is startup owner. User 2 is investor
         self.user1 = User.objects.create_user(password='password1', email='user1@email.com')
@@ -590,20 +595,20 @@ class SaveProfileTestCase(APITestCase):
 
     def test_anonymous_save_startup_request(self):
         """Test that user can't access the protected endpoint without login."""
-        url = reverse('profiles:startups-save', kwargs={'pk': self.startup1.pk})
+        url = reverse(self.save_startup_url, kwargs={'pk': self.startup1.pk})
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_save_startup(self):
         """Positive test to save startup to favourites"""
-        url = reverse('profiles:startups-save', kwargs={'pk': self.startup1.pk})
+        url = reverse(self.save_startup_url, kwargs={'pk': self.startup1.pk})
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_save_startup_wrong_user(self):
         """Negative test to save startup to favourites when user has no investor profile"""
-        url = reverse('profiles:startups-save', kwargs={'pk': self.startup1.pk})
+        url = reverse(self.save_startup_url, kwargs={'pk': self.startup1.pk})
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -612,15 +617,215 @@ class SaveProfileTestCase(APITestCase):
         """Negative test to save startup to favourites when startup does not exist"""
         invalid_startup_id = StartupProfile.objects.order_by(
             '-id').first().id + 1 if StartupProfile.objects.exists() else 1
-        url = reverse('profiles:startups-save', kwargs={'pk': invalid_startup_id})
+        url = reverse(self.save_startup_url, kwargs={'pk': invalid_startup_id})
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_save_startup_second_time(self):
         """Negative test to save startup to favourites if startup is already followed"""
-        url = reverse('profiles:startups-save', kwargs={'pk': self.startup1.pk})
+        url = reverse(self.save_startup_url, kwargs={'pk': self.startup1.pk})
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
         self.client.post(url)
         response2 = self.client.post(url)
         self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_delete_favorite_startup_anonymous(self):
+        """Test that anonymous user has no access to the endpoint"""
+        url = reverse(self.unsave_startup_url, kwargs={'pk': self.startup1.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_favorite_startup(self):
+        """Test removing startup from saved favorites"""
+
+        # Saving startup first
+        save_url = reverse(self.save_startup_url, kwargs={'pk': self.startup1.pk})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
+        save_response = self.client.post(save_url)
+
+        # Unsaving startup
+        unsave_url = reverse(self.unsave_startup_url, kwargs={'pk': self.startup1.pk})
+        response = self.client.delete(unsave_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(self.startup1.followers.filter(pk=self.user2.pk).exists())
+
+    def test_delete_not_existing_favorite_startup(self):
+        """Test removing startup that not exists from saved favorites"""
+        url = reverse(self.unsave_startup_url, kwargs={'pk': self.startup1.pk})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def tearDown(self):
+        del self.token_user1
+        del self.token_user2
+        InvestorProfile.objects.all().delete()
+        StartupProfile.objects.all().delete()
+        User.objects.all().delete()
+        super().tearDown()
+
+
+class ListSavedProfilesTestCase(APITestCase):
+
+    get_saved_startups_url = 'profiles:startups-list'
+
+    def setUp(self):
+
+        self.startup1_name = 'SuperCompany'
+        self.startup1_industry = 'transport'
+        self.startup1_size = '100'
+        self.startup1_country = 'United Kingdom'
+        self.startup1_city = 'Los Angeles'
+
+        # Creating users and their startup profiles
+        self.user1 = User.objects.create_user(password='password1', email='user1@email.com')
+        self.startup1 = StartupProfile.objects.create(
+            user=self.user1,
+            company_name=self.startup1_name,
+            industry=self.startup1_industry,
+            size=self.startup1_size,
+            country=self.startup1_country,
+            city=self.startup1_city,
+            zip_code='90002',
+            address='Some street 7',
+            phone='+380632225577',
+            email='random@email.com',
+            description='Some description',
+        )
+        self.user2 = User.objects.create_user(password='password2', email='user2@email.com')
+        self.startup2 = StartupProfile.objects.create(
+            user=self.user2,
+            company_name='Small Business',
+            industry='tourism',
+            size='200',
+            country='USA',
+            city='London',
+            zip_code='E1 6AN',
+            address='Some street 74',
+            phone='+380632225522',
+            email='randdsaom@email.com',
+            description='Some description',
+        )
+
+        # 3rd user will be acting as investor
+        self.user3 = User.objects.create_user(password='password3', email='user3@email.com')
+        self.investor = InvestorProfile.objects.create(
+            user=self.user3,
+            country="Ukraine",
+            phone="+380631234455",
+            email="testca3se@gmail.com",
+        )
+
+        # Adding startups to favourites
+        startups = [self.startup1, self.startup2]
+        self.investor.followed_startups.add(*startups)
+
+        # Generating user's access token
+        self.token_user3 = self.get_jwt_token(self.user3)
+
+    def get_jwt_token(self, user):
+        """Helper method to create a JWT token for a user."""
+        refresh = RefreshToken.for_user(user)
+        return str(refresh.access_token)
+
+    def test_get_followed_startups_anonymous(self):
+        """Test that checks if anonymous user has no access to the protected endpoint"""
+        url = reverse(self.get_saved_startups_url)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_get_followed_startups(self):
+        """Test that checks if authorized user can get list of startups"""
+        url = reverse(self.get_saved_startups_url)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user3}')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+
+    def search_and_assert(self, search_query, search_field: str, expected_count: int):
+        """Helper method to perform search and assert results."""
+        url = reverse(self.get_saved_startups_url) + f'?search={search_query}'
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user3}')
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), expected_count)
+        for item in response.data:
+            self.assertIn(search_query, item[search_field])
+
+    def filter_and_assert(self, filter_queries: dict, expected_count: int):
+        """Helper method to perform filter and assert results."""
+        query_params = '&'.join([f'{field}={value}' for field, value in filter_queries.items()])
+        url = reverse(self.get_saved_startups_url) + '?' + query_params
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user3}')
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), expected_count)
+        if expected_count > 0:
+            for item in response.data:
+                for field, search_query in filter_queries.items():
+                    self.assertEqual(search_query, item.get(field))
+
+    def test_get_followed_startups_name_search(self):
+        """Test search by name"""
+        search_query = self.startup1_name[0:-2]
+        search_field = 'company_name'
+        self.search_and_assert(search_query, search_field, 1)
+
+    def test_get_followed_startups_industry_search(self):
+        """Test search by industry"""
+        search_query = self.startup1_industry[0:-2]
+        search_field = 'industry'
+        self.search_and_assert(search_query, search_field, 1)
+
+    def test_get_followed_startups_country_search(self):
+        """Test search by country"""
+        search_query = self.startup1_country[0:-2]
+        search_field = 'country'
+        self.search_and_assert(search_query, search_field, 1)
+
+    def test_get_followed_startups_city_search(self):
+        """Test search by city"""
+        search_query = self.startup1_city[0:-2]
+        search_field = 'city'
+        self.search_and_assert(search_query, search_field, 1)
+
+    def test_get_followed_startups_industry_filter(self):
+        """Test filter by industry"""
+        search_query = {'industry': self.startup1_industry}
+        self.filter_and_assert(search_query, 1)
+
+    def test_get_followed_startups_country_filter(self):
+        """Test filter by country"""
+        search_query = {'country': self.startup1_country}
+        self.filter_and_assert(search_query, 1)
+
+    def test_get_followed_startups_city_filter(self):
+        """Test filter by city"""
+        search_query = {'city': self.startup1_city}
+        self.filter_and_assert(search_query, 1)
+
+    def test_get_followed_startups_size_filter(self):
+        """Test filter by size"""
+        search_query = {'size': self.startup1_size}
+        self.filter_and_assert(search_query, 1)
+
+    def test_get_followed_startups_multiple_filters_positive(self):
+        """Test multiple filters in one request"""
+        search_query = {'country': self.startup1_country, 'industry': self.startup1_industry}
+        self.filter_and_assert(search_query, 1)
+
+    def test_get_followed_startups_multiple_filters_negative(self):
+        """Test multiple filters in one request"""
+        search_query = {'country': self.startup1_country, 'industry': 'abc'}
+        self.filter_and_assert(search_query, 0)
+
+    def tearDown(self):
+        del self.token_user3
+        self.investor.followed_startups.remove(self.startup1, self.startup2)
+        InvestorProfile.objects.all().delete()
+        StartupProfile.objects.all().delete()
+        User.objects.all().delete()
+        super().tearDown()
