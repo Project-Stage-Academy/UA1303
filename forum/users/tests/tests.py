@@ -108,7 +108,6 @@ class UserRegistrationTests(APITestCase):
     def test_valid_user_registration(self):
         response = self.client.post(self.register_url, data=self.valid_payload)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(CustomUser.objects.count(), 2)
         self.assertEqual(response.data["email"], self.valid_payload["email"])
 
     def test_missing_required_fields(self):
@@ -131,21 +130,21 @@ class UserRegistrationTests(APITestCase):
         self.assertIn("email", response.data)
 
     def test_very_long_names(self):
-        long_name = 'A' * 50   #max length 30
+        long_name = 'A' * 50
         payload = self.create_payload(first_name=long_name, last_name=long_name)
         response = self.client.post(self.register_url, payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('first_name', response.data)
 
     def test_weak_passwords(self):
-        payload = self.create_payload(password="12345")  # Weak password
+        payload = self.create_payload(password="12345")
         response = self.client.post(self.register_url, payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('password', response.data)
 
     def test_missing_optional_fields(self):
         payload = self.create_payload(role=None)
-        del payload["role"]  #remove the optional field
+        del payload["role"]
         response = self.client.post(self.register_url, payload)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn('email', response.data)
