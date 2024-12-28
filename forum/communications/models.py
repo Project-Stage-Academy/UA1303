@@ -15,11 +15,9 @@ class Room(models.Model):
 
     def join(self, user):
         self.online.add(user)
-        self.save()
 
     def leave(self, user):
         self.online.remove(user)
-        self.save()
 
     def get_users_id(self):
         return {
@@ -28,14 +26,11 @@ class Room(models.Model):
         }
 
     def get_users_names(self):
-        User = get_user_model()
         return {
-            "user_1": User.objects.get(
-                user_id=self.get_users_id()["user_1"]
-            ).first_name,
-            "user_2": User.objects.get(
-                user_id=self.get_users_id()["user_2"]
-            ).first_name,
+            "user_1": self.online.first().first_name if self.online.exists() else None,
+            "user_2": (
+                self.online.last().first_name if self.online.count() > 1 else None
+            ),
         }
 
     def __str__(self):

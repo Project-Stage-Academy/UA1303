@@ -2,7 +2,7 @@ import json
 from asgiref.sync import sync_to_async
 from django.contrib.auth import get_user_model
 from channels.generic.websocket import AsyncWebsocketConsumer
-
+from .models import Room
 
 User = get_user_model()
 
@@ -11,6 +11,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
         self.room_group_name = f"chat_{self.room_name}"
+
+        # Check if the room exists
+        room_exists = await sync_to_async(
+            Room.objects.filter(name=self.room_name).exists
+        )()
+        if not room_exists:
+            await self.close(code=404)
+            print("Room does not exists")
+            return
 
         # Join room group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
