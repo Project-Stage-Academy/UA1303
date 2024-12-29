@@ -13,7 +13,6 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 import os
 from datetime import timedelta
 from pathlib import Path
-
 import environ
 from dotenv import load_dotenv
 
@@ -47,6 +46,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework.authtoken",
+    "django_filters",
     "djoser",
     "rest_framework_simplejwt.token_blacklist",
     "captcha",
@@ -92,6 +92,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "forum.wsgi.application"
 
 AUTH_USER_MODEL = 'users.CustomUser'
+
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
@@ -115,8 +116,6 @@ DATABASES = {
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
-
-AUTH_USER_MODEL = 'users.CustomUser'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -161,7 +160,6 @@ STATICFILES_DIRS = []
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
-
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
@@ -339,3 +337,12 @@ SWAGGER_SETTINGS = {
     },
     'USE_SESSION_AUTH': False,
 }
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-snowflake",
+    }
+}
+
+RATELIMIT_USE_CACHE = "default"  # Make sure RATELIMIT is reconfigured to use Redis when we add this type of caching
