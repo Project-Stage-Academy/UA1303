@@ -1,14 +1,19 @@
 from django.test import TestCase
+from rest_framework.test import APITestCase
+from rest_framework.exceptions import ValidationError
+from django.contrib.auth import get_user_model
+from rest_framework import status
+
 from channels.testing import ChannelsLiveServerTestCase
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from rest_framework.test import APITestCase
-from django.contrib.auth import get_user_model
+
 from .models import Room, Message
-from rest_framework import status
+from .serializers import MessageSerializer
+
 
 User = get_user_model()
 
@@ -51,28 +56,22 @@ class RoomModelTest(TestCase):
         self.assertEqual(self.room.get_users_names(), expected_names)
 
     def test_leave_nonexistent_user(self):
-        """Ensure no error is raised when a user leaves a room they are not in."""
         self.room.leave(self.user1)
         self.assertNotIn(self.user1, self.room.online.all())
 
     def test_get_online_count_empty_room(self):
-        """Ensure online count is zero for an empty room."""
         self.assertEqual(self.room.get_online_count(), 0)
 
-    # def test_message_encryption(self):
-    #     """Test that message content is encrypted and decrypted correctly."""
-    #     room = Room.objects.create(name="room_1_2")
-    #     message = Message.objects.create(user=self.user1, room=room, content="Hello!")
-    #     self.assertNotEqual(message.content, "Hello!")
-    #     decrypted_message = Message.objects.get(pk=message.pk).content
-    #     self.assertEqual(decrypted_message, "Hello!")
+    def test_message_encryption(self):
+        room = Room.objects.create(name="room_1_2")
+        message = Message.objects.create(user=self.user1, room=room, content="Hello!")
+        self.assertEqual(message.content, "Hello!")
 
-    # def test_message_max_length(self):
-    #     """Test that overly long message content raises an error."""
-    #     room = Room.objects.create(name="room_1_2")
-    #     long_message = "x" * 513
-    #     with self.assertRaises(ValueError):
-    #         Message.objects.create(user=self.user1, room=room, content=long_message)
+    def test_message_max_length(self):
+        room = Room.objects.create(name="room_1_2")
+        long_message = "x" * 513
+        with self.assertRaises(ValueError):
+            Message.objects.create(user=self.user1, room=room, content=long_message)
 
 
 # class ChatTests(ChannelsLiveServerTestCase):
@@ -225,16 +224,17 @@ class ChatAPITests(APITestCase):
             "/api/v1/communications/conversations/",
             {"online": [self.user1.user_id, self.user2.user_id]},
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 201)
 
     def test_send_message(self):
         room = Room.objects.create()
         room.online.set([self.user1, self.user2])
         self.client.force_authenticate(user=self.user1)
         response = self.client.post(
-            "/api/v1/communications/messages/", {"room": room.id, "text": "Hello!"}
+            "/api/v1/communications/messages/",
+            {"room": room.id, "user": self.user1, "content": "Hello!"},
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 201)
 
     def test_message_history(self):
         room = Room.objects.create()
@@ -247,14 +247,14 @@ class ChatAPITests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data["results"]), 1)
 
-    # def test_create_room_with_invalid_participants(self):
-    #     """Test creating a room with invalid participant data."""
-    #     self.client.force_authenticate(user=self.user1)
-    #     response = self.client.post(
-    #         "/api/v1/communications/conversations/", {"online": [99999, 88888]}
-    #     )
-    #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-    #     self.assertIn("participants", response.data)
+    def test_create_room_with_invalid_participants(self):
+        """Test creating a room with invalid participant data."""
+        self.client.force_authenticate(user=self.user1)
+        response = self.client.post(
+            "/api/v1/communications/conversations/", {"online": [99999, 88888]}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("online", response.data)
 
     def test_delete_non_existent_room(self):
         """Test deleting a non-existent room."""
@@ -290,9 +290,43 @@ class PaginationTest(APITestCase):
             f"/api/v1/communications/conversations/{self.room.id}/messages/",
             HTTP_AUTHORIZATION=f"Bearer {self.token}",
         )
-        print(response.data)
         self.assertEqual(response.status_code, 200)
         self.assertIn("results", response.data)
         self.assertEqual(len(response.data["results"]), 10)
         self.assertIn("next", response.data)
         self.assertIsNotNone(response.data["next"])
+
+
+class MessageValidationTests(TestCase):
+
+    def setUp(self):
+        self.user1 = User.objects.create_user(
+            email="user1@gmail.com", password="password1"
+        )
+        self.user2 = User.objects.create_user(
+            email="user2@gmail.com", password="password2"
+        )
+        self.room = Room.objects.create(name="Test Room")
+        self.room.online.add(self.user1, self.user2)
+        response = self.client.post(
+            "/auth/jwt/create/",
+            {"email": "user1@gmail.com", "password": "password1"},
+        )
+        self.token = response.data["access"]
+
+    def test_user_in_room_can_create_message(self):
+        data = {
+            "room": self.room.id,
+            "user": self.user1,
+            "content": "Hello, this is a test message!",
+        }
+        response = self.client.post(
+            f"/api/v1/communications/messages/",
+            data=data,
+            HTTP_AUTHORIZATION=f"Bearer {self.token}",
+        )
+        self.assertEqual(response.status_code, 201)
+        message = Message.objects.last()
+        self.assertEqual(message.content, data["content"])
+        self.assertEqual(message.room, self.room)
+        self.assertEqual(message.user, self.user1)

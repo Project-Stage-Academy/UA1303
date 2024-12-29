@@ -42,3 +42,8 @@ class Message(models.Model):
     room = models.ForeignKey(to=Room, on_delete=models.CASCADE)
     content = encrypt(models.CharField(max_length=512))
     timestamp = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if len(self.content) > 512:
+            raise ValueError("Content must have less than 512 characters.")
+        super().save(*args, **kwargs)

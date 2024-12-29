@@ -1,12 +1,16 @@
+from django.forms import ValidationError
 from django.shortcuts import render
+from django.contrib.auth import get_user_model
+from django.core.exceptions import PermissionDenied
+
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
-from .models import Message
+
+from .models import Message, Room
 from .serializers import ChatRoomSerializer, MessageSerializer
-from django.contrib.auth import get_user_model
 from .permissions import IsParticipant
-from django.core.exceptions import PermissionDenied
 from .paginations import MessagePagination
+
 
 User = get_user_model()
 
@@ -24,6 +28,14 @@ class CreateConversationView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
+        participants = serializer.validated_data.get("online")
+        if len(participants) != 2:
+            raise ValidationError("A conversation must have exactly two participants.")
+        existing_room = Room.objects.filter(
+            name=f"room_{participants[0].user_id}_{participants[1].user_id}"
+        ).exists()
+        if existing_room:
+            raise ValidationError("This conversation already exists.")
         serializer.save()
 
 
@@ -45,4 +57,8 @@ class MessageHistoryView(generics.ListAPIView):
 
     def get_queryset(self):
         room_id = self.kwargs["conversation_id"]
-        return Message.objects.filter(room_id=room_id).order_by("timestamp")
+        return (
+            Message.objects.filter(room_id=room_id)
+            .only("id", "content")
+            .order_by("timestamp")
+        )
