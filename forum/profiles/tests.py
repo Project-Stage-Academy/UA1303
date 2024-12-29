@@ -5,7 +5,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
-from .models import InvestorProfile, StartupProfile
+from .models import InvestorProfile
+from .models import User, StartupProfile
 from .serializers import InvestorProfileSerializer
 
 User = get_user_model()
@@ -361,6 +362,7 @@ class ProfileTestCase(APITestCase):
             email='random@email.com',
             description='Some description',
         )
+
     def get_jwt_token(self, user):
         """Helper method to create a JWT token for a user."""
         refresh = RefreshToken.for_user(user)
@@ -624,3 +626,309 @@ class SaveProfileTestCase(APITestCase):
         self.client.post(url)
         response2 = self.client.post(url)
         self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class StartupProfileFilterSearchSortTestCase(APITestCase):
+    """
+    Test case for filtering, searching, and sorting startup profiles via the API
+
+    This test case covers the following functionalities:
+    1. Filtering startup profiles by industry, country, city, and size
+    2. Searching startup profiles by company_name, industry, country, and city (using partial words)
+    3. Sorting startup profiles by company_name and created_at
+
+    The tests check if the correct responses are returned based on the specified filters, search terms, and sort parameters
+    """
+
+    startup_url = reverse('profiles:profiles-list')
+
+    @classmethod
+    def setUp(cls):
+        """
+        Set up test data for all tests in this class
+
+        - Creates 8 users
+        - Generates JWT tokens for each user
+        - Creates 8 startup profiles associated with the users
+
+        This data is used to perform the filtering, searching, and sorting tests
+        """
+        cls.users = [
+            User.objects.create_user(password=f'My_super_password_{i}', email=f'user_{i}@gmail.com')
+            for i in range(1, 9)
+        ]
+        cls.tokens = {user.email: cls.get_jwt_token(user) for user in cls.users}
+
+        cls.startups = [
+            StartupProfile.objects.create(
+                user=cls.users[0],
+                company_name='Tech Innovators',
+                industry='Technology',
+                size='Small',
+                country='USA',
+                city='San Francisco',
+                zip_code='94103',
+                address='123 Innovation Street',
+                phone='+12345670000',
+                email='info@techinnovators.com',
+                description='A leading company in tech innovations',
+            ),
+            StartupProfile.objects.create(
+                user=cls.users[1],
+                company_name='Tech Giants',
+                industry='Technology',
+                size='Large',
+                country='USA',
+                city='New York',
+                zip_code='10001',
+                address='500 Tech Boulevard',
+                phone='+12125551234',
+                email='contact@techgiants.com',
+                description='A major player in the tech industry',
+            ),
+            StartupProfile.objects.create(
+                user=cls.users[2],
+                company_name='Green Solutions',
+                industry='Environmental',
+                size='Medium',
+                country='Canada',
+                city='Toronto',
+                zip_code='M5H 2N2',
+                address='456 Eco Drive',
+                phone='+14165556789',
+                email='contact@greensolutions.ca',
+                description='Providing sustainable and eco-friendly solutions',
+            ),
+            StartupProfile.objects.create(
+                user=cls.users[3],
+                company_name='Eco Innovations',
+                industry='Environmental',
+                size='Small',
+                country='Sweden',
+                city='Stockholm',
+                zip_code='11121',
+                address='789 Green Avenue',
+                phone='+4681234567',
+                email='info@ecoinnovations.se',
+                description='Innovative solutions for a greener planet',
+            ),
+            StartupProfile.objects.create(
+                user=cls.users[4],
+                company_name='QuickStart',
+                industry='Education',
+                size='Large',
+                country='India',
+                city='Mumbai',
+                zip_code='400001',
+                address='',
+                phone='',
+                email='support@quickstart.in',
+                description='',
+            ),
+            StartupProfile.objects.create(
+                user=cls.users[5],
+                company_name='LearnHub',
+                industry='Education',
+                size='Medium',
+                country='UK',
+                city='London',
+                zip_code='EC1A 1BB',
+                address='222 Learning Way',
+                phone='+442071234567',
+                email='info@learnhub.co.uk',
+                description='Offering a wide range of educational resources',
+            ),
+            StartupProfile.objects.create(
+                user=cls.users[6],
+                company_name='Future Makers',
+                industry='AI',
+                size='Startup',
+                country='Germany',
+                city='Berlin',
+                zip_code='10115',
+                address='789 AI Lane',
+                phone='+4915112345678',
+                email='team@futuremakers.de',
+                description='A small AI-driven startup',
+            ),
+            StartupProfile.objects.create(
+                user=cls.users[7],
+                company_name='AI Pioneers',
+                industry='AI',
+                size='Medium',
+                country='France',
+                city='Paris',
+                zip_code='75001',
+                address='999 Innovation Boulevard',
+                phone='+33123456789',
+                email='contact@aipioneers.fr',
+                description='Pioneering advancements in artificial intelligence',
+            ),
+        ]
+
+    @classmethod
+    def get_jwt_token(cls, user):
+        """
+        Generate a JWT token for the specified user
+
+        Args:
+            user (User): The user instance for whom to generate the token
+
+        Returns:
+            str: The JWT access token
+        """
+        refresh = RefreshToken.for_user(user)
+        return str(refresh.access_token)
+
+    # Filtering tests
+    def test_filter_by_industry(self):
+        """
+        Test filtering startup profiles by industry (exact match)
+        """
+        url = f"{self.startup_url}?industry=Technology"
+        api_key = self.tokens["user_1@gmail.com"]
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreater(len(response.data), 0)
+        self.assertTrue(all('Technology' in startup['industry'] for startup in response.data))
+
+    def test_filter_by_country(self):
+        """
+        Test filtering startup profiles by country (exact match)
+        """
+        url = f"{self.startup_url}?country=USA"
+        api_key = self.tokens["user_1@gmail.com"]
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreater(len(response.data), 0)
+        self.assertTrue(all('USA' in startup['country'] for startup in response.data))
+
+    def test_filter_by_city(self):
+        """
+        Test filtering startup profiles by city (exact match)
+        """
+        url = f"{self.startup_url}?city=New York"
+        api_key = self.tokens["user_1@gmail.com"]
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreater(len(response.data), 0)
+        self.assertTrue(all('New York' in startup['city'] for startup in response.data))
+
+    def test_filter_by_size(self):
+        """
+        Test filtering startup profiles by size (exact match)
+        """
+        url = f"{self.startup_url}?size=Large"
+        api_key = self.tokens["user_1@gmail.com"]
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreater(len(response.data), 0)
+        self.assertTrue(all('Large' in startup['size'] for startup in response.data))
+
+    # Search tests (using partial words)
+    def test_search_by_partial_company_name(self):
+        """
+        Test searching for startup profiles by partial company_name
+        """
+        url = f"{self.startup_url}?search=Tech Inno"  # Partial word
+        api_key = self.tokens["user_1@gmail.com"]
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreater(len(response.data), 0)
+        self.assertTrue(any('Tech Innovators' in startup['company_name'] for startup in response.data))
+
+    def test_search_by_partial_industry(self):
+        """
+        Test searching for startup profiles by partial industry
+        """
+        url = f"{self.startup_url}?search=Tech"  # Partial word
+        api_key = self.tokens["user_1@gmail.com"]
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreater(len(response.data), 0)
+        self.assertTrue(any('Technology' in startup['industry'] for startup in response.data))
+
+    def test_search_by_partial_country(self):
+        """
+        Test searching for startup profiles by partial country
+        """
+        url = f"{self.startup_url}?search=US"  # Partial word
+        api_key = self.tokens["user_1@gmail.com"]
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreater(len(response.data), 0)
+        self.assertTrue(any('USA' in startup['country'] for startup in response.data))
+
+    def test_search_by_partial_city(self):
+        """
+        Test searching for startup profiles by partial city
+        """
+        url = f"{self.startup_url}?search=San"  # Partial word
+        api_key = self.tokens["user_1@gmail.com"]
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreater(len(response.data), 0)
+        self.assertTrue(any('San Francisco' in startup['city'] for startup in response.data))
+
+    # Sorting tests
+    def test_sort_by_company_name(self):
+        """
+        Test sorting startup profiles by company_name
+        """
+        url = f"{self.startup_url}?ordering=company_name"
+        api_key = self.tokens["user_1@gmail.com"]
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(all(response.data[i]['company_name'] <= response.data[i + 1]['company_name']
+                            for i in range(len(response.data) - 1)))
+
+    def test_sort_by_created_at(self):
+        """
+        Test sorting startup profiles by created_at date
+        """
+        url = f"{self.startup_url}?ordering=created_at"
+        api_key = self.tokens["user_1@gmail.com"]
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(all(response.data[i]['created_at'] <= response.data[i + 1]['created_at'] for i in
+                            range(len(response.data) - 1)))
+
+    def tearDown(self):
+        """
+        Clean up after each test
+
+        This method is called after each test to ensure a clean state for the next test
+        It deletes all startup profiles and users created for the tests
+        """
+        StartupProfile.objects.all().delete()
+        User.objects.all().delete()
