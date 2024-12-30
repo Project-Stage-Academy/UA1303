@@ -2,6 +2,9 @@ from django.test import TestCase
 from rest_framework.test import APITestCase
 from django.contrib.auth import get_user_model
 from rest_framework import status
+from unittest.mock import patch, MagicMock
+from rest_framework_simplejwt.tokens import RefreshToken
+import factory
 
 from channels.testing import WebsocketCommunicator
 
@@ -12,15 +15,38 @@ from .models import Room, Message
 User = get_user_model()
 
 
+class User1Factory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = User
+
+    email = "user1@gmail.com"
+    first_name = "John"
+    last_name = "Doe"
+    password = factory.PostGenerationMethodCall("set_password", "password1")
+
+
+class User2Factory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = User
+
+    email = "user2@gmail.com"
+    first_name = "Jane"
+    last_name = "Doe"
+    password = factory.PostGenerationMethodCall("set_password", "password2")
+
+
+class RoomFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Room
+
+    name = "room_1_2"
+
+
 class RoomModelTest(TestCase):
     def setUp(self):
-        self.user1 = User.objects.create_user(
-            email="user1@example.com", password="password"
-        )
-        self.user2 = User.objects.create_user(
-            email="user2@example.com", password="password"
-        )
-        self.room = Room.objects.create(name="room_1_2")
+        self.user1 = User1Factory()
+        self.user2 = User2Factory()
+        self.room = RoomFactory()
 
     def test_room_name(self):
         self.assertEqual(self.room.name, "room_1_2")
@@ -70,21 +96,15 @@ class RoomModelTest(TestCase):
 
 class ChatConsumerTest(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            email="chat_user@example.com",
-            first_name="John",
-            last_name="Doe",
-            password="password",
-            is_active=True,
-        )
-        self.room = Room.objects.create(name="chat_2_1")
+        self.user = User1Factory()
+        self.room = RoomFactory()
 
     async def connect_to_chat(self, user):
         communicator = WebsocketCommunicator(
-            ChatConsumer.as_asgi(), f"/ws/api/v1/communications/room/chat_2_1/"
+            ChatConsumer.as_asgi(), f"/ws/api/v1/communications/room/room_1_2/"
         )
         communicator.scope["user"] = user
-        communicator.scope["url_route"] = {"kwargs": {"room_name": "chat_2_1"}}
+        communicator.scope["url_route"] = {"kwargs": {"room_name": "room_1_2"}}
         connected, _ = await communicator.connect()
         return communicator, connected
 
@@ -156,8 +176,8 @@ class ChatConsumerTest(TestCase):
 
 class ChatAPITests(APITestCase):
     def setUp(self):
-        self.user1 = User.objects.create_user(email="user1@gmail.com", password="pass")
-        self.user2 = User.objects.create_user(email="user2@gmail.com", password="pass")
+        self.user1 = User1Factory()
+        self.user2 = User2Factory()
 
     def test_create_conversation(self):
         self.client.force_authenticate(user=self.user1)
@@ -206,17 +226,13 @@ class ChatAPITests(APITestCase):
 
 class PaginationTest(APITestCase):
     def setUp(self):
-        self.user1 = User.objects.create_user(
-            email="user1@example.com", password="password"
-        )
-        self.user2 = User.objects.create_user(
-            email="user2@example.com", password="password"
-        )
-        self.room = Room.objects.create(name="Test Room")
+        self.user1 = User1Factory()
+        self.user2 = User2Factory()
+        self.room = RoomFactory()
         self.room.online.set([self.user1, self.user2])
         response = self.client.post(
             "/auth/jwt/create/",
-            {"email": "user1@example.com", "password": "password"},
+            {"email": "user1@gmail.com", "password": "password1"},
         )
         self.token = response.data["access"]
 
@@ -237,32 +253,76 @@ class PaginationTest(APITestCase):
         self.assertIn("next", response.data)
         self.assertIsNotNone(response.data["next"])
 
+    def test_pagination_fewer_than_ten_messages(self):
+        Message.objects.all().delete()
 
-class MessageValidationTests(TestCase):
+        for i in range(5):
+            Message.objects.create(
+                content=f"Message {i+1}", user=self.user1, room=self.room
+            )
 
+        response = self.client.get(
+            f"/api/v1/communications/conversations/{self.room.id}/messages/",
+            HTTP_AUTHORIZATION=f"Bearer {self.token}",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("results", response.data)
+        self.assertEqual(len(response.data["results"]), 5)
+        self.assertEqual(response.data["next"], None)
+
+    def test_pagination_last_page(self):
+        response = self.client.get(
+            f"/api/v1/communications/conversations/{self.room.id}/messages/?page=2",
+            HTTP_AUTHORIZATION=f"Bearer {self.token}",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("results", response.data)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["next"], None)
+
+    def test_pagination_invalid_page_number(self):
+        response = self.client.get(
+            f"/api/v1/communications/conversations/{self.room.id}/messages/?page=999",
+            HTTP_AUTHORIZATION=f"Bearer {self.token}",
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("detail", response.data)
+        self.assertEqual(response.data["detail"], "Invalid page.")
+
+
+class MessageValidationTests(APITestCase):
     def setUp(self):
-        self.user1 = User.objects.create_user(
-            email="user1@gmail.com", password="password1"
-        )
-        self.user2 = User.objects.create_user(
-            email="user2@gmail.com", password="password2"
-        )
-        self.room = Room.objects.create(name="Test Room")
+        self.user1 = User1Factory()
+        self.user2 = User2Factory()
+        self.room = RoomFactory()
         self.room.online.add(self.user1, self.user2)
+
+        refresh = RefreshToken.for_user(self.user1)
+        self.token = str(refresh.access_token)
+
+    @patch("rest_framework_simplejwt.tokens.RefreshToken.for_user")
+    def test_jwt_mocked(self, mock_refresh_token):
+        mocked_token = MagicMock()
+        mocked_token.access_token = "mocked_access_token"
+        mock_refresh_token.return_value = mocked_token
+
         response = self.client.post(
-            "/auth/jwt/create/",
-            {"email": "user1@gmail.com", "password": "password1"},
+            "/auth/jwt/create/", {"email": self.user1.email, "password": "password1"}
         )
-        self.token = response.data["access"]
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["access"], "mocked_access_token")
 
     def test_user_in_room_can_create_message(self):
         data = {
             "room": self.room.id,
-            "user": self.user1,
+            "user": self.user1.user_id,
             "content": "Hello, this is a test message!",
         }
         response = self.client.post(
-            f"/api/v1/communications/messages/",
+            "/api/v1/communications/messages/",
             data=data,
             HTTP_AUTHORIZATION=f"Bearer {self.token}",
         )
