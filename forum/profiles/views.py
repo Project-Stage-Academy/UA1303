@@ -5,10 +5,11 @@ from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import status
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.mixins import ListModelMixin
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.serializers import Serializer
@@ -16,7 +17,7 @@ from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
 from .models import InvestorProfile, StartupProfile
 from .permissions import IsOwnerOrReadOnly
-from .serializers import InvestorProfileSerializer, StartupProfileSerializer
+from .serializers import InvestorProfileSerializer, StartupProfileSerializer, PublicStartupProfileSerializer
 from projects.models import Project
 
 
@@ -167,3 +168,14 @@ class SaveStartupViewSet(ListModelMixin, GenericViewSet):
             return Response({'detail': f'{startup} is not in favourites'}, status=status.HTTP_400_BAD_REQUEST)
         startup.followers.remove(investor)
         return Response({'detail': f'{startup} has been removed'}, status=status.HTTP_200_OK)
+
+
+class PublicStartupViewSet(ListModelMixin, GenericViewSet):
+    """Returns a list of public startups"""
+    serializer_class = PublicStartupProfileSerializer
+    queryset = StartupProfile.objects.filter(is_public=True)
+    pagination_class = PageNumberPagination
+
+    @swagger_auto_schema(tags=['Public Startups'])
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)

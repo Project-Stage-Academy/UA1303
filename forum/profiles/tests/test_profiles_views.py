@@ -5,8 +5,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
-from .models import InvestorProfile, StartupProfile
-from .serializers import InvestorProfileSerializer
+from profiles.models import InvestorProfile, StartupProfile
+from profiles.serializers import InvestorProfileSerializer
 
 User = get_user_model()
 
@@ -337,7 +337,7 @@ class InvestorProfileOwnershipTest(APITestCase):
         super().tearDown()
 
 
-class ProfileTestCase(APITestCase):
+class StartupProfileTestCase(APITestCase):
     def setUp(self):
         # Creating users. User1 is startup owner.
         self.user1 = User.objects.create_user(password='password1', email='user1@email.com')
