@@ -893,12 +893,12 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
                 company_name='Green Solutions',
                 industry='Environmental',
                 size='Medium',
-                country='Canada',
-                city='Toronto',
+                country='USA',
+                city='New York',
                 zip_code='M5H 2N2',
                 address='456 Eco Drive',
                 phone='+14165556789',
-                email='contact@greensolutions.ca',
+                email='contact@greensolutions.us',
                 description='Providing sustainable and eco-friendly solutions',
             ),
             StartupProfile.objects.create(
@@ -1047,6 +1047,36 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
             token_email="user_1@gmail.com",
             validation_func=lambda data: self.assertTrue(
                 all('Large' in startup['size'] for startup in data)
+            )
+        )
+
+    def test_multiple_filters_industry_city(self):
+        """
+        Test filtering several fields:
+            -industry
+            -city
+        """
+        self.perform_request_and_validate(
+            query_params="?industry=Technology&city=New York",
+            token_email="user_1@gmail.com",
+            validation_func=lambda data: self.assertTrue(
+                all('Technology' in startup['industry'] for startup in data) and
+                all('New York' in startup['city'] for startup in data),
+            )
+        )
+
+    def test_multiple_filters_country_city(self):
+        """
+        Test filtering several fields:
+            -country
+            -city
+        """
+        self.perform_request_and_validate(
+            query_params="?country=USA&city=New York",
+            token_email="user_1@gmail.com",
+            validation_func=lambda data: self.assertTrue(
+                all('USA' in startup['country'] for startup in data) and
+                all('New York' in startup['city'] for startup in data),
             )
         )
 
