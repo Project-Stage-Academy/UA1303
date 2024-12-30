@@ -22,7 +22,7 @@ class ChatRoomSerializer(serializers.ModelSerializer):
 
 
 class MessageSerializer(serializers.ModelSerializer):
-    # user = CustomUserSerializer(read_only=True)
+    user = CustomUserSerializer(read_only=True)
 
     class Meta:
         model = Message

@@ -1,24 +1,12 @@
 from django.test import TestCase
 from rest_framework.test import APITestCase
-from rest_framework.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from rest_framework import status
 
 from channels.testing import WebsocketCommunicator
-from channels.testing import ChannelsLiveServerTestCase
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.alert import Alert
-from selenium.common.exceptions import UnexpectedAlertPresentException, TimeoutException
 
-from channels.layers import get_channel_layer
-from django.contrib.auth.models import AnonymousUser
 from .consumers import ChatConsumer
 from .models import Room, Message
-from .serializers import MessageSerializer
 
 
 User = get_user_model()
