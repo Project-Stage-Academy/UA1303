@@ -553,7 +553,6 @@ class ProfileTestCase(APITestCase):
 
 
 class SaveProfileTestCase(APITestCase):
-
     save_startup_url = 'profiles:startups-save-favorite'
     unsave_startup_url = 'profiles:startups-delete-favorite'
 
@@ -668,7 +667,6 @@ class SaveProfileTestCase(APITestCase):
 
 
 class ListSavedProfilesTestCase(APITestCase):
-
     get_saved_startups_url = 'profiles:startups-list'
 
     def setUp(self):
@@ -832,7 +830,6 @@ class ListSavedProfilesTestCase(APITestCase):
         super().tearDown()
 
 
-
 class StartupProfileFilterSearchSortTestCase(APITestCase):
     """
     Test case for filtering, searching, and sorting startup profiles via the API
@@ -985,148 +982,111 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
         refresh = RefreshToken.for_user(user)
         return str(refresh.access_token)
 
-    # Filtering tests
-    def test_filter_by_industry(self):
+    def perform_request_and_validate(self, query_params, token_email, validation_func):
         """
-        Test filtering startup profiles by industry (exact match)
+        Universal helper function to perform GET requests and validate results
+
+        Args:
+            query_params (str): Query parameters for the request (e.g., '?industry=Technology')
+            token_email (str): Email of the user to retrieve the JWT token
+            validation_func (Callable): A function to validate the retrieved data
+
         """
-        url = f"{self.startup_url}?industry=Technology"
-        api_key = self.tokens["user_1@gmail.com"]
+        url = f"{self.startup_url}{query_params}"
+        api_key = self.tokens[token_email]
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
 
         response = self.client.get(url)
-
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreater(len(response.data), 0)
-        self.assertTrue(all('Technology' in startup['industry'] for startup in response.data))
+        validation_func(response.data)
+
+    # Updated tests
+    def test_filter_by_industry(self):
+        """
+        Test filtering by industry
+        """
+        self.perform_request_and_validate(
+            query_params="?industry=Technology",
+            token_email="user_1@gmail.com",
+            validation_func=lambda data: self.assertTrue(
+                all('Technology' in startup['industry'] for startup in data)
+            )
+        )
 
     def test_filter_by_country(self):
         """
-        Test filtering startup profiles by country (exact match)
+        Test filtering by country
         """
-        url = f"{self.startup_url}?country=USA"
-        api_key = self.tokens["user_1@gmail.com"]
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
-
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(len(response.data), 0)
-        self.assertTrue(all('USA' in startup['country'] for startup in response.data))
+        self.perform_request_and_validate(
+            query_params="?country=USA",
+            token_email="user_1@gmail.com",
+            validation_func=lambda data: self.assertTrue(
+                all('USA' in startup['country'] for startup in data)
+            )
+        )
 
     def test_filter_by_city(self):
         """
-        Test filtering startup profiles by city (exact match)
+        Test filtering by city
         """
-        url = f"{self.startup_url}?city=New York"
-        api_key = self.tokens["user_1@gmail.com"]
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
-
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(len(response.data), 0)
-        self.assertTrue(all('New York' in startup['city'] for startup in response.data))
+        self.perform_request_and_validate(
+            query_params="?city=New York",
+            token_email="user_1@gmail.com",
+            validation_func=lambda data: self.assertTrue(
+                all('New York' in startup['city'] for startup in data)
+            )
+        )
 
     def test_filter_by_size(self):
         """
-        Test filtering startup profiles by size (exact match)
+        Test filtering by company size
         """
-        url = f"{self.startup_url}?size=Large"
-        api_key = self.tokens["user_1@gmail.com"]
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
+        self.perform_request_and_validate(
+            query_params="?size=Large",
+            token_email="user_1@gmail.com",
+            validation_func=lambda data: self.assertTrue(
+                all('Large' in startup['size'] for startup in data)
+            )
+        )
 
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(len(response.data), 0)
-        self.assertTrue(all('Large' in startup['size'] for startup in response.data))
-
-    # Search tests (using partial words)
     def test_search_by_partial_company_name(self):
         """
-        Test searching for startup profiles by partial company_name
+        Test searching by partial company name
         """
-        url = f"{self.startup_url}?search=Tech Inno"  # Partial word
-        api_key = self.tokens["user_1@gmail.com"]
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
+        self.perform_request_and_validate(
+            query_params="?search=Tech Inno",
+            token_email="user_1@gmail.com",
+            validation_func=lambda data: self.assertTrue(
+                any('Tech Innovators' in startup['company_name'] for startup in data)
+            )
+        )
 
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(len(response.data), 0)
-        self.assertTrue(any('Tech Innovators' in startup['company_name'] for startup in response.data))
-
-    def test_search_by_partial_industry(self):
-        """
-        Test searching for startup profiles by partial industry
-        """
-        url = f"{self.startup_url}?search=Tech"  # Partial word
-        api_key = self.tokens["user_1@gmail.com"]
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
-
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(len(response.data), 0)
-        self.assertTrue(any('Technology' in startup['industry'] for startup in response.data))
-
-    def test_search_by_partial_country(self):
-        """
-        Test searching for startup profiles by partial country
-        """
-        url = f"{self.startup_url}?search=US"  # Partial word
-        api_key = self.tokens["user_1@gmail.com"]
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
-
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(len(response.data), 0)
-        self.assertTrue(any('USA' in startup['country'] for startup in response.data))
-
-    def test_search_by_partial_city(self):
-        """
-        Test searching for startup profiles by partial city
-        """
-        url = f"{self.startup_url}?search=San"  # Partial word
-        api_key = self.tokens["user_1@gmail.com"]
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
-
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(len(response.data), 0)
-        self.assertTrue(any('San Francisco' in startup['city'] for startup in response.data))
-
-    # Sorting tests
     def test_sort_by_company_name(self):
         """
-        Test sorting startup profiles by company_name
+        Test sorting by company name
         """
-        url = f"{self.startup_url}?ordering=company_name"
-        api_key = self.tokens["user_1@gmail.com"]
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
-
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(all(response.data[i]['company_name'] <= response.data[i + 1]['company_name']
-                            for i in range(len(response.data) - 1)))
+        self.perform_request_and_validate(
+            query_params="?ordering=company_name",
+            token_email="user_1@gmail.com",
+            validation_func=lambda data: self.assertTrue(
+                all(data[i]['company_name'] <= data[i + 1]['company_name']
+                    for i in range(len(data) - 1))
+            )
+        )
 
     def test_sort_by_created_at(self):
         """
-        Test sorting startup profiles by created_at date
+        Test sorting by creation date
         """
-        url = f"{self.startup_url}?ordering=created_at"
-        api_key = self.tokens["user_1@gmail.com"]
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
-
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(all(response.data[i]['created_at'] <= response.data[i + 1]['created_at'] for i in
-                            range(len(response.data) - 1)))
+        self.perform_request_and_validate(
+            query_params="?ordering=created_at",
+            token_email="user_1@gmail.com",
+            validation_func=lambda data: self.assertTrue(
+                all(data[i]['created_at'] <= data[i + 1]['created_at']
+                    for i in range(len(data) - 1))
+            )
+        )
 
     def tearDown(self):
         """
