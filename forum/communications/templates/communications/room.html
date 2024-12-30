@@ -35,6 +35,7 @@
       const roomName = JSON.parse(
         document.getElementById("room-name").textContent
       );
+
       const protocol =
         window.location.protocol === "https:" ? "wss://" : "ws://";
       const chatSocket = new WebSocket(
@@ -48,6 +49,12 @@
       chatSocket.onmessage = function (e) {
         const data = JSON.parse(e.data);
         const chatLog = document.querySelector("#chat-log");
+
+        if (data.error) {
+          alert("Error: " + data.error);
+          return;
+        }
+
         const messageElement = document.createElement("div");
         messageElement.classList.add(
           "p-2",
@@ -61,7 +68,7 @@
         chatLog.scrollTop = chatLog.scrollHeight;
       };
 
-      chatSocket.onclose = function (e) {
+      chatSocket.onclose = function () {
         console.error("Chat socket closed unexpectedly");
       };
 
@@ -71,18 +78,17 @@
       };
 
       document.querySelector("#chat-message-input").focus();
-      document.querySelector("#chat-message-submit").onclick = function (e) {
+      document.querySelector("#chat-message-submit").onclick = function () {
         const messageInputDom = document.querySelector("#chat-message-input");
         const message = messageInputDom.innerText.trim();
 
-        alert("Message content: " + message); // Додаємо для перевірки
         if (!message) {
           alert("Message cannot be empty.");
           return;
         }
 
         chatSocket.send(JSON.stringify({ message: message }));
-        messageInputDom.innerText = ""; // Очищаємо введене після відправлення
+        messageInputDom.innerText = ""; // Clear input after sending
       };
     </script>
   </body>
