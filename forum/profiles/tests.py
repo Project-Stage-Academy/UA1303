@@ -1,8 +1,11 @@
+import random
 from operator import itemgetter
 
+import factory
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from faker import Faker
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
@@ -11,6 +14,7 @@ from .models import InvestorProfile
 from .models import User, StartupProfile
 from .serializers import InvestorProfileSerializer
 
+faker = Faker()
 User = get_user_model()
 
 
@@ -832,154 +836,84 @@ class ListSavedProfilesTestCase(APITestCase):
         super().tearDown()
 
 
+# Create a faker instance for generating fake data
+faker = Faker()
+
+
+class UserFactory(factory.django.DjangoModelFactory):
+    """
+    Factory class for generating fake User instances
+    """
+
+    class Meta:
+        model = User
+
+    email = factory.LazyAttribute(lambda _: faker.email())
+    password = factory.PostGenerationMethodCall('set_password', 'password123')
+
+
+class StartupProfileFactory(factory.django.DjangoModelFactory):
+    """
+    Factory class for generating fake StartupProfile instances
+    """
+
+    class Meta:
+        model = StartupProfile
+
+    user = factory.SubFactory(UserFactory)
+    company_name = factory.LazyAttribute(lambda _: faker.company())
+    industry = factory.Iterator(['Technology', 'Environmental', 'Education', 'AI'])
+    size = factory.Iterator(['Small', 'Medium', 'Large', 'Startup'])
+    country = factory.Iterator(['USA', 'Sweden', 'India', 'UK', 'Germany', 'France'])
+    city = factory.LazyAttribute(lambda _: faker.city())
+    zip_code = factory.LazyAttribute(lambda _: faker.zipcode())
+    address = factory.LazyAttribute(lambda _: faker.address())
+    phone = factory.LazyAttribute(lambda _: faker.phone_number())
+    email = factory.LazyAttribute(lambda _: faker.email())
+    description = factory.LazyAttribute(lambda _: faker.text(max_nb_chars=200))
+
+
 class StartupProfileFilterSearchSortTestCase(APITestCase):
     """
     Test case for filtering, searching, and sorting startup profiles via the API
-
-    This test case covers the following functionalities:
-    1. Filtering startup profiles by industry, country, city, and size
-    2. Searching startup profiles by company_name, industry, country, and city (using partial words)
-    3. Sorting startup profiles by company_name and created_at
-
-    The tests check if the correct responses are returned based on the specified filters, search terms, and sort parameters
     """
 
     startup_url = reverse('profiles:profiles-list')
 
-    @classmethod
-    def setUp(cls):
+    def setUp(self):
         """
-        Set up test data for all tests in this class
-
-        - Creates 8 users
-        - Generates JWT tokens for each user
-        - Creates 8 startup profiles associated with the users
-
-        This data is used to perform the filtering, searching, and sorting tests
+        Set up test data for each test using factory_boy
         """
-        cls.users = [
-            User.objects.create_user(password=f'My_super_password_{i}', email=f'user_{i}@gmail.com')
-            for i in range(1, 9)
-        ]
-        cls.tokens = {user.email: cls.get_jwt_token(user) for user in cls.users}
+        # Create users dynamically
+        self.users = UserFactory.create_batch(8)
 
-        cls.startups = [
-            StartupProfile.objects.create(
-                user=cls.users[0],
-                company_name='Tech Innovators',
-                industry='Technology',
-                size='Small',
-                country='USA',
-                city='San Francisco',
-                zip_code='94103',
-                address='123 Innovation Street',
-                phone='+12345670000',
-                email='info@techinnovators.com',
-                description='A leading company in tech innovations',
-            ),
-            StartupProfile.objects.create(
-                user=cls.users[1],
-                company_name='Tech Giants',
-                industry='Technology',
-                size='Large',
-                country='USA',
-                city='New York',
-                zip_code='10001',
-                address='500 Tech Boulevard',
-                phone='+12125551234',
-                email='contact@techgiants.com',
-                description='A major player in the tech industry',
-            ),
-            StartupProfile.objects.create(
-                user=cls.users[2],
-                company_name='Green Solutions',
-                industry='Environmental',
-                size='Medium',
-                country='USA',
-                city='New York',
-                zip_code='M5H 2N2',
-                address='456 Eco Drive',
-                phone='+14165556789',
-                email='contact@greensolutions.us',
-                description='Providing sustainable and eco-friendly solutions',
-            ),
-            StartupProfile.objects.create(
-                user=cls.users[3],
-                company_name='Eco Innovations',
-                industry='Environmental',
-                size='Small',
-                country='Sweden',
-                city='Stockholm',
-                zip_code='11121',
-                address='789 Green Avenue',
-                phone='+4681234567',
-                email='info@ecoinnovations.se',
-                description='Innovative solutions for a greener planet',
-            ),
-            StartupProfile.objects.create(
-                user=cls.users[4],
-                company_name='QuickStart',
-                industry='Education',
-                size='Large',
-                country='India',
-                city='Mumbai',
-                zip_code='400001',
-                address='',
-                phone='',
-                email='support@quickstart.in',
-                description='',
-            ),
-            StartupProfile.objects.create(
-                user=cls.users[5],
-                company_name='LearnHub',
-                industry='Education',
-                size='Medium',
-                country='UK',
-                city='London',
-                zip_code='EC1A 1BB',
-                address='222 Learning Way',
-                phone='+442071234567',
-                email='info@learnhub.co.uk',
-                description='Offering a wide range of educational resources',
-            ),
-            StartupProfile.objects.create(
-                user=cls.users[6],
-                company_name='Duplicate Name',
-                industry='AI',
-                size='Startup',
-                country='Germany',
-                city='Berlin',
-                zip_code='10115',
-                address='789 AI Lane',
-                phone='+4915112345678',
-                email='team@futuremakers.de',
-                description='A small AI-driven startup',
-            ),
-            StartupProfile.objects.create(
-                user=cls.users[7],
-                company_name='Duplicate Name',
-                industry='AI',
-                size='Medium',
-                country='France',
-                city='Paris',
-                zip_code='75001',
-                address='999 Innovation Boulevard',
-                phone='+33123456789',
-                email='contact@aipioneers.fr',
-                description='Pioneering advancements in artificial intelligence',
-            ),
-        ]
+        # Generate JWT tokens for each user and store them in self.tokens
+        self.tokens = {
+            user.email: self.get_jwt_token(user) for user in self.users
+        }
 
-    @classmethod
-    def get_jwt_token(cls, user):
+        # Create startup profiles for users with company names, including duplicates
+        self.startups = StartupProfileFactory.create_batch(
+            8,
+            user=factory.Iterator(self.users),
+            company_name=factory.Iterator([
+                'Tech Innovators', 'Tech Giants', 'Green Solutions',
+                'Eco Innovations', 'QuickStart', 'LearnHub',
+                'Duplicate Name', 'Duplicate Name'
+            ]),
+            country=factory.Iterator([
+                'USA', 'USA', 'Canada', 'Canada', 'UK', 'UK', 'USA', 'Canada'
+            ]),
+            city=factory.Iterator([
+                'New York', 'San Francisco', 'Toronto', 'Vancouver',
+                'London', 'Manchester', 'New York', 'Toronto'
+            ])
+        )
+
+    @staticmethod
+    def get_jwt_token(user):
         """
-        Generate a JWT token for the specified user
-
-        Args:
-            user (User): The user instance for whom to generate the token
-
-        Returns:
-            str: The JWT access token
+        Generate a JWT token for the specified user.
         """
         refresh = RefreshToken.for_user(user)
         return str(refresh.access_token)
@@ -992,10 +926,13 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
             query_params (str): Query parameters for the request (e.g., '?industry=Technology')
             token_email (str): Email of the user to retrieve the JWT token
             validation_func (Callable): A function to validate the retrieved data
-
         """
         url = f"{self.startup_url}{query_params}"
-        api_key = self.tokens[token_email]
+        api_key = self.tokens.get(token_email)
+
+        if not api_key:
+            self.fail(f"Token for email {token_email} not found")
+
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
 
         response = self.client.get(url)
@@ -1003,14 +940,14 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
         self.assertGreater(len(response.data), 0)
         validation_func(response.data)
 
-    # Updated tests
     def test_filter_by_industry(self):
         """
         Test filtering by industry
         """
+        user_email = random.choice(self.users).email
         self.perform_request_and_validate(
             query_params="?industry=Technology",
-            token_email="user_1@gmail.com",
+            token_email=user_email,
             validation_func=lambda data: self.assertTrue(
                 all('Technology' in startup['industry'] for startup in data)
             )
@@ -1020,9 +957,10 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
         """
         Test filtering by country
         """
+        user_email = random.choice(self.users).email
         self.perform_request_and_validate(
             query_params="?country=USA",
-            token_email="user_1@gmail.com",
+            token_email=user_email,
             validation_func=lambda data: self.assertTrue(
                 all('USA' in startup['country'] for startup in data)
             )
@@ -1032,9 +970,10 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
         """
         Test filtering by city
         """
+        user_email = random.choice(self.users).email
         self.perform_request_and_validate(
             query_params="?city=New York",
-            token_email="user_1@gmail.com",
+            token_email=user_email,
             validation_func=lambda data: self.assertTrue(
                 all('New York' in startup['city'] for startup in data)
             )
@@ -1044,9 +983,10 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
         """
         Test filtering by company size
         """
+        user_email = random.choice(self.users).email
         self.perform_request_and_validate(
             query_params="?size=Large",
-            token_email="user_1@gmail.com",
+            token_email=user_email,
             validation_func=lambda data: self.assertTrue(
                 all('Large' in startup['size'] for startup in data)
             )
@@ -1054,13 +994,12 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
 
     def test_multiple_filters_industry_city(self):
         """
-        Test filtering several fields:
-            -industry
-            -city
+        Test filtering several fields: industry and city
         """
+        user_email = random.choice(self.users).email
         self.perform_request_and_validate(
             query_params="?industry=Technology&city=New York",
-            token_email="user_1@gmail.com",
+            token_email=user_email,
             validation_func=lambda data: self.assertTrue(
                 all('Technology' in startup['industry'] for startup in data) and
                 all('New York' in startup['city'] for startup in data),
@@ -1069,13 +1008,12 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
 
     def test_multiple_filters_country_city(self):
         """
-        Test filtering several fields:
-            -country
-            -city
+        Test filtering several fields: country and city
         """
+        user_email = random.choice(self.users).email
         self.perform_request_and_validate(
             query_params="?country=USA&city=New York",
-            token_email="user_1@gmail.com",
+            token_email=user_email,
             validation_func=lambda data: self.assertTrue(
                 all('USA' in startup['country'] for startup in data) and
                 all('New York' in startup['city'] for startup in data),
@@ -1084,26 +1022,80 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
 
     def test_search_by_partial_company_name(self):
         """
-        Test searching by partial company name
+        Test searching by partial company name using a substring from the objects
         """
+        partial_name = self.startups[0].company_name[:5]  # Get a substring of the first company's name
+        user_email = random.choice(self.users).email
         self.perform_request_and_validate(
-            query_params="?search=Tech Inno",
-            token_email="user_1@gmail.com",
+            query_params=f"?search={partial_name}",
+            token_email=user_email,
             validation_func=lambda data: self.assertTrue(
-                any('Tech Innovators' in startup['company_name'] for startup in data)
+                any(partial_name in startup['company_name'] for startup in data)
             )
         )
+
+    def test_search_by_partial_industry(self):
+        """
+        Test searching by partial industry
+        """
+        partial_name = random.choice(self.startups).industry[:3]
+        user_email = random.choice(self.users).email
+        self.perform_request_and_validate(
+            query_params=f"?search={partial_name}",
+            token_email=user_email,
+            validation_func=lambda data: self.assertTrue(
+                any(partial_name in startup['industry'] for startup in data)
+            )
+        )
+
+    def test_search_by_partial_country(self):
+        """
+        Test searching by partial country
+        """
+        partial_name = random.choice(self.startups).country[:3]
+        user_email = random.choice(self.users).email
+        self.perform_request_and_validate(
+            query_params=f"?search={partial_name}",
+            token_email=user_email,
+            validation_func=lambda data: self.assertTrue(
+                any(partial_name in startup['country'] for startup in data)
+            )
+        )
+
+    def test_search_by_partial_city(self):
+        """
+        Test searching by partial city
+        """
+        partial_name = random.choice(self.startups).city[:4]
+        user_email = random.choice(self.users).email
+        self.perform_request_and_validate(
+            query_params=f"?search={partial_name}",
+            token_email=user_email,
+            validation_func=lambda data: self.assertTrue(
+                any(partial_name in startup['city'] for startup in data)
+            )
+        )
+
+    @staticmethod
+    def is_sorted_by_field(data, fields, reverse=False):
+        """
+        Helper method to check if a list of dictionaries is sorted by specific fields
+        `fields` can be a single field or a tuple of fields for secondary sorting
+        """
+        sorted_data = sorted(data, key=itemgetter(*fields))
+        return data == sorted_data
 
     def test_sort_by_company_name(self):
         """
         Test sorting by company name
         """
+        user_email = random.choice(self.users).email
         self.perform_request_and_validate(
             query_params="?ordering=company_name",
-            token_email="user_1@gmail.com",
+            token_email=user_email,
             validation_func=lambda data: self.assertTrue(
-                all(data[i]['company_name'] <= data[i + 1]['company_name']
-                    for i in range(len(data) - 1))
+                self.is_sorted_by_field(data, ['company_name']),
+                "Data is not sorted correctly by company_name"
             )
         )
 
@@ -1111,56 +1103,34 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
         """
         Test sorting by creation date
         """
+        user_email = random.choice(self.users).email
         self.perform_request_and_validate(
             query_params="?ordering=created_at",
-            token_email="user_1@gmail.com",
+            token_email=user_email,
             validation_func=lambda data: self.assertTrue(
-                all(data[i]['created_at'] <= data[i + 1]['created_at']
-                    for i in range(len(data) - 1))
-            )
-        )
-
-    @staticmethod
-    def is_sorted_by_field(data, field):
-        """
-        Helper method to check if a list of dictionaries is sorted by a specific field
-
-        Args:
-            data (list): The list of dictionaries to check
-            field (str): The field to sort by
-
-        Returns:
-            bool: True if sorted, False otherwise
-        """
-        return data == sorted(data, key=itemgetter(field))
-
-    def test_sort_by_company_name_with_duplicates(self):
-        """
-        Test sorting by company name with duplicate company names
-        """
-        self.perform_request_and_validate(
-            query_params="?ordering=company_name",
-            token_email="user_1@gmail.com",
-            validation_func=lambda data: self.assertTrue(
-                self.is_sorted_by_field(data, 'company_name'),
-                "Data is not sorted correctly by company_name"
+                self.is_sorted_by_field(data, ['created_at']),
+                "Data is not sorted correctly by created_at"
             )
         )
 
     def test_sort_by_created_at_with_duplicates(self):
         """
-        Test sorting by "created_at" field with duplicate values.
+        Test sorting by "created_at" field with duplicate values
         """
+        user_email = random.choice(self.users).email
         self.perform_request_and_validate(
             query_params="?ordering=created_at",
-            token_email="user_1@gmail.com",
+            token_email=user_email,
             validation_func=lambda data: self.assertTrue(
-                self.is_sorted_by_field(data, 'created_at'),
-                "Data is not sorted correctly by created_at."
+                self.is_sorted_by_field(data, ['created_at', 'company_name']),
+                "Data is not sorted correctly by created_at with duplicates"
             )
         )
 
     def test_unauthorized_access(self):
+        """
+        Test unauthorized access
+        """
         url = f"{self.startup_url}?industry=Technology"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -1168,9 +1138,6 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
     def tearDown(self):
         """
         Clean up after each test
-
-        This method is called after each test to ensure a clean state for the next test
-        It deletes all startup profiles and users created for the tests
         """
         StartupProfile.objects.all().delete()
         User.objects.all().delete()
