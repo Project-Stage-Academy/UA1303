@@ -1160,6 +1160,11 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
             )
         )
 
+    def test_unauthorized_access(self):
+        url = f"{self.startup_url}?industry=Technology"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
     def tearDown(self):
         """
         Clean up after each test
