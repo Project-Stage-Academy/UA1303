@@ -1,3 +1,5 @@
+from operator import itemgetter
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -942,7 +944,7 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
             ),
             StartupProfile.objects.create(
                 user=cls.users[6],
-                company_name='Future Makers',
+                company_name='Duplicate Name',
                 industry='AI',
                 size='Startup',
                 country='Germany',
@@ -955,7 +957,7 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
             ),
             StartupProfile.objects.create(
                 user=cls.users[7],
-                company_name='AI Pioneers',
+                company_name='Duplicate Name',
                 industry='AI',
                 size='Medium',
                 country='France',
@@ -1115,6 +1117,46 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
             validation_func=lambda data: self.assertTrue(
                 all(data[i]['created_at'] <= data[i + 1]['created_at']
                     for i in range(len(data) - 1))
+            )
+        )
+
+    @staticmethod
+    def is_sorted_by_field(data, field):
+        """
+        Helper method to check if a list of dictionaries is sorted by a specific field
+
+        Args:
+            data (list): The list of dictionaries to check
+            field (str): The field to sort by
+
+        Returns:
+            bool: True if sorted, False otherwise
+        """
+        return data == sorted(data, key=itemgetter(field))
+
+    def test_sort_by_company_name_with_duplicates(self):
+        """
+        Test sorting by company name with duplicate company names
+        """
+        self.perform_request_and_validate(
+            query_params="?ordering=company_name",
+            token_email="user_1@gmail.com",
+            validation_func=lambda data: self.assertTrue(
+                self.is_sorted_by_field(data, 'company_name'),
+                "Data is not sorted correctly by company_name"
+            )
+        )
+
+    def test_sort_by_created_at_with_duplicates(self):
+        """
+        Test sorting by "created_at" field with duplicate values.
+        """
+        self.perform_request_and_validate(
+            query_params="?ordering=created_at",
+            token_email="user_1@gmail.com",
+            validation_func=lambda data: self.assertTrue(
+                self.is_sorted_by_field(data, 'created_at'),
+                "Data is not sorted correctly by created_at."
             )
         )
 
