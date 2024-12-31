@@ -13,7 +13,6 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 import os
 from datetime import timedelta
 from pathlib import Path
-
 import environ
 from dotenv import load_dotenv
 
@@ -47,6 +46,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework.authtoken",
+    "django_filters",
     "djoser",
     "rest_framework_simplejwt.token_blacklist",
     "captcha",
@@ -92,6 +92,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "forum.wsgi.application"
 
 AUTH_USER_MODEL = 'users.CustomUser'
+
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
@@ -159,7 +160,6 @@ STATICFILES_DIRS = []
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
-
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
@@ -228,6 +228,7 @@ LOGGING = {
         'django': {
             'handlers': ['console', 'forum_file'],
             'level': 'WARNING',
+            'propagate': False,
         },
         'django.db.backends': {
             'handlers': ['console', 'database_file'],
@@ -237,7 +238,7 @@ LOGGING = {
         '': {
             'handlers': ['console', 'forum_file'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
         },
     },
 }
@@ -260,6 +261,8 @@ SIMPLE_JWT = {
     'LEEWAY': 0,
 
     'AUTH_HEADER_TYPES': ('JWT', 'Bearer'),
+    'TOKEN_OBTAIN_SERIALIZER': 'users.serializers.CustomTokenObtainPairSerializer',
+    'USER_ID_FIELD': 'user_id'
 }
 
 AUTH_USER_MODEL = 'users.CustomUser'
@@ -308,29 +311,11 @@ RATE_LIMIT_RATE = "5/m"
 RATE_LIMIT_BLOCK = True
 DOMAIN_NAME = os.getenv("DOMAIN_NAME", "localhost")
 
-# Swagger settings to enable JWT authorization
-SWAGGER_SETTINGS = {
-    'SECURITY_DEFINITIONS': {
-        'Bearer': {
-            'type': 'apiKey',
-            'name': 'Authorization',
-            'in': 'header',
-            'description': 'Enter: "Bearer <JWT token>"',
-        }
-    },
-    'USE_SESSION_AUTH': False,
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-snowflake",
+    }
 }
 
-# Swagger settings to enable JWT authorization
-
-SWAGGER_SETTINGS = {
-    'SECURITY_DEFINITIONS': {
-        'Bearer': {
-            'type': 'apiKey',
-            'name': 'Authorization',
-            'in': 'header',
-            'description': 'Enter: "Bearer <JWT token>"',
-        }
-    },
-    'USE_SESSION_AUTH': False,
-}
+RATELIMIT_USE_CACHE = "default"  # Make sure RATELIMIT is reconfigured to use Redis when we add this type of caching
