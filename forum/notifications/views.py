@@ -6,53 +6,87 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 
-from .models import (
-    NotificationType,
-    NotificationPreference,
-    NotificationCategory
-)
+from .models import NotificationMethod, NotificationPreference, NotificationCategory
 from .serializers import (
-    NotificationTypeSerializer,
+    NotificationMethodSerializer,
     NotificationCategorySerializer,
     NotificationPreferenceSerializer,
-    NotificationPreferenceUpdateSerializer
+    NotificationPreferenceUpdateSerializer,
 )
 
 logger = logging.getLogger(__name__)
 
 PREFERENCE_RESPONSES = {
-    200: openapi.Response(description="Successful operation", schema=NotificationPreferenceSerializer),
+    200: openapi.Response(
+        description="Successful operation", schema=NotificationPreferenceSerializer
+    ),
     404: openapi.Response(description="Preferences not found."),
     400: openapi.Response(description="Invalid data."),
 }
 
-NOTIFICATION_TYPES_RESPONSES = {
-    200: openapi.Response(description="Successful operation", schema=NotificationTypeSerializer(many=True)),
+NOTIFICATION_METHODS_RESPONSES = {
+    200: openapi.Response(
+        description="Successful operation",
+        schema=NotificationMethodSerializer(many=True),
+    ),
 }
 
 NOTIFICATION_CATEGORIES_RESPONSES = {
-    200: openapi.Response(description="Successful operation", schema=NotificationCategorySerializer(many=True)),
+    200: openapi.Response(
+        description="Successful operation",
+        schema=NotificationCategorySerializer(many=True),
+    ),
 }
 
 
-class NotificationTypeView(APIView):
+class NotificationMethodView(APIView):
     """
-    To get all possible Notification Types
+    API view to retrieve all available notification methods.
+
+    This view handles the retrieval of notification methods,
+    providing details such as the name and description of each method.
+
+    HTTP Methods:
+    - GET: Returns a list of all notification methods.
+
+    Responses:
+    - 200 OK: A JSON array of notification methods, each with the fields:
+        - id (int): The unique identifier of the notification method.
+        - name (str): The name of the notification method.
+        - description (str): A brief description of the notification method.
     """
+
+    permission_classes = [IsAuthenticated]
+
     @swagger_auto_schema(
-        operation_description="Get all notification types.",
-        responses=NOTIFICATION_TYPES_RESPONSES,
+        operation_description="Get all notification methods.",
+        responses=NOTIFICATION_METHODS_RESPONSES,
     )
     def get(self, request):
-        notification_types = NotificationType.objects.all()
-        serializer = NotificationTypeSerializer(notification_types, many=True)
+        notification_methods = NotificationMethod.objects.all()
+        serializer = NotificationMethodSerializer(notification_methods, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
 
 class NotificationCategoryView(APIView):
     """
-    To get all possible Notification Categories
+    API view to retrieve all available notification categories.
+
+    This view handles the retrieval of notification categories,
+    providing details such as the name and description of each category.
+
+    HTTP Methods:
+    - GET: Returns a list of all notification categories.
+
+    Responses:
+    - 200 OK: A JSON array of notification categories, each with the fields:
+        - id (int): The unique identifier of the notification category.
+        - name (str): The name of the notification category.
+        - description (str): A brief description of the notification category.
     """
+
+    permission_classes = [IsAuthenticated]
+
     @swagger_auto_schema(
         operation_description="Get all notification categories.",
         responses=NOTIFICATION_CATEGORIES_RESPONSES,
@@ -65,8 +99,27 @@ class NotificationCategoryView(APIView):
 
 class NotificationPreferenceView(APIView):
     """
-    To get, update or delete a notification preference of the user
+    API view to manage the notification preferences of the authenticated
+    user.
+
+    This view allows users to retrieve, update, and delete their
+    notification preferences.
+
+    Permissions:
+    - Requires authentication (`IsAuthenticated`).
+
+    HTTP Methods:
+    - GET: Retrieve the current user's notification preferences.
+    - PUT: Update or create the current user's notification preferences.
+    - DELETE: Delete the current user's notification preferences.
+
+    Responses:
+    - 200 OK: The operation was successful.
+    - 400 Bad Request: The request data is invalid or missing.
+    - 404 Not Found: No notification preferences are set for the user.
+    - 500 Internal Server Error: An unexpected error occurred.
     """
+
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
@@ -80,7 +133,10 @@ class NotificationPreferenceView(APIView):
             serializer = NotificationPreferenceSerializer(preferences)
             return Response(serializer.data, status=status.HTTP_200_OK)
         logger.warning(f"No preferences found for user {request.user.email}")
-        return Response({"detail": "Notification preferences not set."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"detail": "Notification preferences not set."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
 
     @swagger_auto_schema(
         operation_description="Update the current user's notification preferences.",
@@ -89,22 +145,49 @@ class NotificationPreferenceView(APIView):
     )
     def put(self, request):
         if not request.data:
-            return Response({"detail": "No data provided."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "No data provided."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
-        preferences, created = NotificationPreference.objects.get_or_create(user=request.user)
-        serializer = NotificationPreferenceUpdateSerializer(preferences, data=request.data)
+        preferences = NotificationPreference.objects.get_or_create(user=request.user)[0]
+        serializer = NotificationPreferenceUpdateSerializer(
+            preferences, data=request.data
+        )
+
         if serializer.is_valid():
-            serializer.save()
-            logger.info(f"Preferences updated for user {request.user.email}")
-            return Response({"detail": "Notification preferences updated successfully."}, status=status.HTTP_200_OK)
-        logger.error(f"Invalid data provided for user {request.user.email}: {serializer.errors}")
+            try:
+                serializer.save()
+                logger.info(f"Preferences updated for user {request.user.email}")
+                return Response(
+                    {"detail": "Notification preferences updated successfully."},
+                    status=status.HTTP_200_OK,
+                )
+            except Exception as e:
+                logger.error(
+                    f"Error updating preferences for user {request.user.email}: {str(e)}"
+                )
+                return Response(
+                    {"detail": "An error occurred while updating preferences."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        logger.error(
+            f"Invalid data provided for user {request.user.email}: {serializer.errors}"
+        )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request):        
-        preferences = self.get_preference(request.user)
+    def delete(self, request):
+        preferences = NotificationPreference.objects.filter(user=request.user)
         if preferences:
             preferences.delete()
             logger.info(f"Preferences deleted for user {request.user.email}")
-            return Response({"detail": "Notification preferences deleted successfully."}, status=status.HTTP_200_OK)
-        logger.warning(f"Attempted to delete preferences for non-existent user {request.user.email}")
-        return Response({"detail": "Notification preferences not set."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Notification preferences deleted successfully."},
+                status=status.HTTP_200_OK,
+            )
+        logger.warning(
+            f"Attempted to delete preferences for non-existent user {request.user.email}"
+        )
+        return Response(
+            {"detail": "Notification preferences not set."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
