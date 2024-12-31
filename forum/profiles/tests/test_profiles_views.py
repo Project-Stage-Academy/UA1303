@@ -338,6 +338,9 @@ class InvestorProfileOwnershipTest(APITestCase):
 
 
 class StartupProfileTestCase(APITestCase):
+
+    url = 'profiles:startup-profile'
+
     def setUp(self):
         # Creating users. User1 is startup owner.
         self.user1 = User.objects.create_user(password='password1', email='user1@email.com')
@@ -369,13 +372,13 @@ class StartupProfileTestCase(APITestCase):
 
     def test_anonymous_get_startup_request(self):
         """Test that user can't access the protected endpoint without login."""
-        url = reverse('profiles:profiles-list')
+        url = reverse(f'{self.url}-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_anonymous_update_startup_profile(self):
         """Test that anonymous user cannot update startup profile."""
-        url = reverse('profiles:profiles-detail', kwargs={'pk': self.startup1.pk})
+        url = reverse(f'{self.url}-detail', kwargs={'pk': self.startup1.pk})
         data = {
             "company_name": "Renamed company",
             "industry": "transport",
@@ -393,14 +396,14 @@ class StartupProfileTestCase(APITestCase):
 
     def test_authenticated_startup_request(self):
         """Test that authenticated user can access the protected endpoint"""
-        url = reverse('profiles:profiles-list')
+        url = reverse(f'{self.url}-list')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_create_startup_profile(self):
         """Test that user 2 can create profile"""
-        url = reverse('profiles:profiles-list')
+        url = reverse(f'{self.url}-list')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
         data = {
             "company_name": "New company",
@@ -431,7 +434,7 @@ class StartupProfileTestCase(APITestCase):
 
     def test_create_startup_profile_required_fields(self):
         """Test that user 2 can create profile without optional fields"""
-        url = reverse('profiles:profiles-list')
+        url = reverse(f'{self.url}-list')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
         data = {
             "company_name": "New company",
@@ -452,7 +455,7 @@ class StartupProfileTestCase(APITestCase):
 
     def test_email_validation(self):
         """Test email validation"""
-        url = reverse('profiles:profiles-list')
+        url = reverse(f'{self.url}-list')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
         data = {
             "company_name": "New company",
@@ -471,7 +474,7 @@ class StartupProfileTestCase(APITestCase):
 
     def test_phone_validation(self):
         """Test phone validation"""
-        url = reverse('profiles:profiles-list')
+        url = reverse(f'{self.url}-list')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
         data = {
             "company_name": "New company",
@@ -490,7 +493,7 @@ class StartupProfileTestCase(APITestCase):
 
     def test_create_second_startup_profile(self):
         """Test that user1 can't create second profile"""
-        url = reverse('profiles:profiles-list')
+        url = reverse(f'{self.url}-list')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
         data = {
             "company_name": "Second company",
@@ -509,7 +512,7 @@ class StartupProfileTestCase(APITestCase):
 
     def test_partial_update_startup_profile(self):
         """Test for user to update existing profile"""
-        url = reverse('profiles:profiles-detail', kwargs={'pk': self.startup1.pk})
+        url = reverse(f'{self.url}-detail', kwargs={'pk': self.startup1.pk})
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
         data = {
             "company_name": "Renamed company",
@@ -531,20 +534,20 @@ class StartupProfileTestCase(APITestCase):
 
     def test_delete_startup_restricted(self):
         """Test for user to protect startup profiles from deletion if user is not a startup owner"""
-        url = reverse('profiles:profiles-detail', kwargs={'pk': self.startup1.pk})
+        url = reverse(f'{self.url}-detail', kwargs={'pk': self.startup1.pk})
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_anonymous_delete_startup_profile(self):
         """Test for user to protect startup profiles from deletion if user is not logged in"""
-        url = reverse('profiles:profiles-detail', kwargs={'pk': self.startup1.pk})
+        url = reverse(f'{self.url}-detail', kwargs={'pk': self.startup1.pk})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_delete_startup_profile(self):
         """Test for user to delete startup if user is a startup owner"""
-        url = reverse('profiles:profiles-detail', kwargs={'pk': self.startup1.pk})
+        url = reverse(f'{self.url}-detail', kwargs={'pk': self.startup1.pk})
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
