@@ -1,10 +1,11 @@
-from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Prefetch
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
+from django_filters.rest_framework import DjangoFilterBackend
 from django_ratelimit.decorators import ratelimit
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+from projects.models import Project
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -17,7 +18,6 @@ from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from .models import InvestorProfile, StartupProfile
 from .permissions import IsOwnerOrReadOnly
 from .serializers import InvestorProfileSerializer, StartupProfileSerializer
-from projects.models import Project
 
 
 class InvestorViewSet(ModelViewSet):
@@ -44,7 +44,7 @@ class StartupProfileViewSet(ModelViewSet):
     API Endpoint for Startup Profiles
     """
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
-    queryset = StartupProfile.objects.all()
+    queryset = StartupProfile.objects.all().order_by('company_name', 'created_at')
     serializer_class = StartupProfileSerializer
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
