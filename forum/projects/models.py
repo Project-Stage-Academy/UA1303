@@ -1,10 +1,10 @@
 from PIL import Image
 from decimal import Decimal
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator, MaxLengthValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxLengthValidator
 from django.contrib.auth import get_user_model
 from django.db import models
-from profiles.models import StartupProfile
+from profiles.models import StartupProfile, InvestorProfile
 
 
 User = get_user_model()
@@ -116,7 +116,12 @@ class Description(models.Model):
 
 
 class Subscription(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
+    investor = models.ForeignKey(
+        InvestorProfile, 
+        on_delete=models.CASCADE, 
+        related_name='subscriptions', 
+        db_index=True
+        )
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='subscriptions')
     share = models.DecimalField(
         max_digits=15, 
