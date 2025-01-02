@@ -15,6 +15,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import APIException
 from rest_framework import status
 
+from .utils import verify_captcha
 from .serializers import (
     PasswordResetSerializer,
     LogoutSerializer,
@@ -27,26 +28,6 @@ RATE_LIMIT_RATE = os.getenv("RATE_LIMIT_RATE", "5/m")
 RATE_LIMIT_BLOCK = os.getenv("RATE_LIMIT_BLOCK", "True").lower() == "true"
 
 logger = logging.getLogger(__name__)
-
-
-def verify_captcha(captcha_response):
-    if settings.DEBUG:
-        return True
-
-    payload = {
-        'secret': settings.RECAPTCHA_PRIVATE_KEY,
-        'response': captcha_response,
-    }
-    try:
-        response = requests.post(
-            'https://www.google.com/recaptcha/api/siteverify',
-            data=payload
-        )
-        result = response.json()
-        return result.get('success', False)
-    except requests.RequestException as e:
-        print(f"Error during CAPTCHA verification: {e}")
-        return False
 
 
 @swagger_auto_schema(
@@ -98,13 +79,19 @@ def password_reset_with_captcha(request):
         is_captcha_valid = verify_captcha(captcha_response)
 
     if not is_captcha_valid:
-        return JsonResponse({"detail": "Invalid captcha."}, status=400)
+        return JsonResponse({
+            "errors": [{"field": "g-recaptcha-response", "message": "Invalid CAPTCHA."}]
+        }, status=400)
 
     serializer = PasswordResetSerializer(data=request.data)
     if serializer.is_valid():
-        return JsonResponse({"detail": "If the email exists, a reset link was sent."}, status=200)
+        return JsonResponse({
+            "detail": "If the email exists, a reset link was sent."
+        }, status=200)
 
-    return JsonResponse({"errors": serializer.errors}, status=400)
+    return JsonResponse({
+        "errors": [{"field": key, "message": value[0]} for key, value in serializer.errors.items()]
+    }, status=400)
 
 
 class LogoutView(APIView):
