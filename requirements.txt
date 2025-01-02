@@ -1,4 +1,4 @@
-asgiref==3.5.2
+asgiref==3.8.1
 astroid==3.3.6
 attrs==24.3.0
 autobahn==24.4.2
@@ -13,9 +13,9 @@ cryptography==44.0.0
 daphne==4.1.2
 defusedxml==0.8.0rc2
 dill==0.3.9
-Django==4.1
 django-environ==0.11.2
 django-phonenumber-field==8.0.0
+Django==5.1.4
 django-ratelimit==4.1.0
 django-recaptcha==3.0.0
 djangorestframework==3.15.1
@@ -68,3 +68,14 @@ channels_redis==4.2.1
 selenium==4.27.1
 django-cryptography==1.1
 factory_boy==3.3.1
+drf-yasg==1.21.8
+pillow==11.0.0
+django_phonenumber_field==8.0.0
+phonenumbers==8.13.52
+djoser==2.3.1
+djangorestframework-simplejwt==5.3.1
+django-environ==0.11.2
+django-filter==24.3
+
+
+

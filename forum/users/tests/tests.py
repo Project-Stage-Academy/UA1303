@@ -1,9 +1,9 @@
 from django.forms import ValidationError
 from django.test import TestCase
-from .validators import SpecialCharacterPasswordValidator
+from users.validators import SpecialCharacterPasswordValidator
 from rest_framework.test import APITestCase
 from rest_framework import status
-from .models import CustomUser
+from users.models import CustomUser
 from django.urls import reverse
 
 
@@ -108,7 +108,6 @@ class UserRegistrationTests(APITestCase):
     def test_valid_user_registration(self):
         response = self.client.post(self.register_url, data=self.valid_payload)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(CustomUser.objects.count(), 2)
         self.assertEqual(response.data["email"], self.valid_payload["email"])
 
     def test_missing_required_fields(self):

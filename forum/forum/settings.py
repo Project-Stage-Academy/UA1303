@@ -11,17 +11,16 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
 import os
-import environ
-from pathlib import Path
-from dotenv import load_dotenv
 from datetime import timedelta
+from pathlib import Path
+import environ
+from dotenv import load_dotenv
 
 load_dotenv()
 env = environ.Env()
 environ.Env.read_env()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
@@ -36,7 +35,6 @@ DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
 # ALLOWED_HOSTS = []
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost").split(",")
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -49,6 +47,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework.authtoken",
+    "django_filters",
     "djoser",
     "rest_framework_simplejwt.token_blacklist",
     "captcha",
@@ -96,6 +95,8 @@ WSGI_APPLICATION = "forum.wsgi.application"
 
 
 AUTH_USER_MODEL = "users.CustomUser"
+
+
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
@@ -116,7 +117,6 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT"),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
@@ -140,7 +140,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/4.1/topics/i18n/
 
@@ -151,7 +150,6 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
@@ -184,7 +182,9 @@ DJOSER = {
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_HSTS_SECONDS = 3600
+
 SECURE_SSL_REDIRECT = os.getenv("DJANGO_SECURE_SSL_REDIRECT", "True") == "True"
+
 
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 
@@ -241,6 +241,7 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
+
         "": {
             "handlers": ["console", "forum_file"],
             "level": "DEBUG",
@@ -273,6 +274,7 @@ AUTH_USER_MODEL = "users.CustomUser"
 RECAPTCHA_PUBLIC_KEY = env("RECAPTCHA_PUBLIC_KEY")
 RECAPTCHA_PRIVATE_KEY = env("RECAPTCHA_PRIVATE_KEY")
 
+
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = env("EMAIL_HOST")
 EMAIL_PORT = env.int("EMAIL_PORT")
@@ -315,6 +317,7 @@ RATE_LIMIT_RATE = "5/m"
 RATE_LIMIT_BLOCK = True
 DOMAIN_NAME = os.getenv("DOMAIN_NAME", "localhost")
 
+
 # Swagger settings to enable JWT authorization
 SWAGGER_SETTINGS = {
     "SECURITY_DEFINITIONS": {
@@ -328,19 +331,7 @@ SWAGGER_SETTINGS = {
     "USE_SESSION_AUTH": False,
 }
 
-# Swagger settings to enable JWT authorization
 
-SWAGGER_SETTINGS = {
-    "SECURITY_DEFINITIONS": {
-        "Bearer": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header",
-            "description": 'Enter: "Bearer <JWT token>"',
-        }
-    },
-    "USE_SESSION_AUTH": False,
-}
 
 # Daphne
 ASGI_APPLICATION = "forum.asgi.application"
@@ -352,3 +343,13 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-snowflake",
+    }
+}
+
+RATELIMIT_USE_CACHE = "default"  # Make sure RATELIMIT is reconfigured to use Redis when we add this type of caching
+

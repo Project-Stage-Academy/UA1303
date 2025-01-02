@@ -1,3 +1,4 @@
+from __future__ import annotations
 from django.db import models
 from django.contrib.auth.models import (
     AbstractBaseUser,
@@ -13,6 +14,23 @@ class Role(IntEnum):
     STARTUP = 1
     INVESTOR = 2
     BOTH = 3
+
+    @classmethod
+    def has_role(cls, user_role: int, role: Role) -> bool:
+        '''
+        Checks if user role alligns to specific role.
+        It relies on current role list - `[UNASSIGNED, STARTUP, INVESTOR, BOTH]`,
+        and always returns `True` if user model `role` field is `BOTH`,
+        so it is important to make sure to adjust logic if roles change.
+        '''
+        return user_role == role or user_role == Role.BOTH
+
+    @classmethod
+    def token_role_aligns(cls, token_role: int, required_role: Role):
+        '''
+        Check whether token role alligns to required one.
+        '''
+        return token_role == required_role.value
 
 
 class CustomUserManager(BaseUserManager):
