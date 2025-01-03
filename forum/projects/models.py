@@ -115,7 +115,7 @@ class Description(models.Model):
         return f"Description(id={self.pk}, startup={self.project.startup.company_name}, project={self.project.title}, description={self.description})"
 
 
-class Subscription(models.Model):
+class Investment(models.Model):
     investor = models.ForeignKey(
         InvestorProfile, 
         on_delete=models.CASCADE, 
@@ -131,7 +131,7 @@ class Subscription(models.Model):
 
     class Meta:
         constraints = [
-            models.CheckConstraint(check=models.Q(share__gt=0), name="share_positive"),
+            models.CheckConstraint(check=models.Q(share__gt=0), name="share_positive", violation_error_message="Share must be greater than zero."),
         ]
     
     def clean_share(self):
