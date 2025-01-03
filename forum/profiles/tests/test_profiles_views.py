@@ -880,7 +880,7 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
     Test case for filtering, searching, and sorting startup profiles via the API
     """
 
-    startup_url = reverse('profiles:profiles-list')
+    startup_url = reverse('profiles:startup-profile-list')
 
     def setUp(self):
         """
