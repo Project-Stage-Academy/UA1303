@@ -8,6 +8,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.generics import ListAPIView
 from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -16,7 +17,7 @@ from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
 from .models import InvestorProfile, StartupProfile
 from .permissions import IsOwnerOrReadOnly
-from .serializers import InvestorProfileSerializer, StartupProfileSerializer
+from .serializers import InvestorProfileSerializer, StartupProfileSerializer, PublicStartupFilterSerializer
 from projects.models import Project
 
 
@@ -167,3 +168,17 @@ class SaveStartupViewSet(ListModelMixin, GenericViewSet):
             return Response({'detail': f'{startup} is not in favourites'}, status=status.HTTP_400_BAD_REQUEST)
         startup.followers.remove(investor)
         return Response({'detail': f'{startup} has been removed'}, status=status.HTTP_200_OK)
+
+
+class PublicStartupFilterViewSet(ListAPIView):
+    queryset = StartupProfile.objects.all()
+    serializer_class = PublicStartupFilterSerializer
+    filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
+    filterset_fields = ['industry', 'country', 'city']
+    search_fields = ['company_name', 'industry', 'country', 'city']
+    ordering_fields = ['company_name', 'created_at']
+
+
+    @swagger_auto_schema(tags=['Public Startups'])
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)

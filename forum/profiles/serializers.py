@@ -69,3 +69,16 @@ class StartupProfileSerializer(serializers.ModelSerializer):
             raise ValidationError(
                 "You cannot create multiple startup profiles. Each user is limited to one startup profile.")
         return data
+
+
+class PublicStartupFilterSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = StartupProfile
+        fields = [
+            'id',
+            'company_name',
+            'industry',
+            'country',
+            'city',
+        ]
