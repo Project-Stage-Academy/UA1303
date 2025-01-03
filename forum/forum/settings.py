@@ -15,6 +15,8 @@ from datetime import timedelta
 from pathlib import Path
 import environ
 from dotenv import load_dotenv
+from mongoengine import connect
+
 
 load_dotenv()
 env = environ.Env()
@@ -60,6 +62,7 @@ INSTALLED_APPS = [
     "dashboard",
     "notifications",
     "channels",
+    'django_mongoengine',
 ]
 
 MIDDLEWARE = [
@@ -106,6 +109,15 @@ AUTH_USER_MODEL = "users.CustomUser"
 #         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
 # }
+
+connect(
+    db=os.getenv("MONGO_DB_NAME"),
+    host=os.getenv("MONGO_HOST"),
+    port=os.getenv("MONGO_PORT"),
+    username=os.getenv("MONGO_USERNAME"),
+    password=os.getenv("MONGO_PASSWORD"),
+    authentication_source="admin",
+)
 
 DATABASES = {
     "default": {
@@ -171,7 +183,7 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
-    'PAGE_SIZE': 50,  # Default pagination page size
+    "PAGE_SIZE": 50,  # Default pagination page size
 }
 
 DJOSER = {
@@ -242,7 +254,6 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
-
         "": {
             "handlers": ["console", "forum_file"],
             "level": "DEBUG",
@@ -333,7 +344,6 @@ SWAGGER_SETTINGS = {
 }
 
 
-
 # Daphne
 ASGI_APPLICATION = "forum.asgi.application"
 CHANNEL_LAYERS = {
@@ -353,4 +363,3 @@ CACHES = {
 }
 
 RATELIMIT_USE_CACHE = "default"  # Make sure RATELIMIT is reconfigured to use Redis when we add this type of caching
-
