@@ -12,6 +12,15 @@ class ProjectViewSet(ModelViewSet):
     queryset = Project.objects.select_related('description')
     serializer_class = ProjectSerializer
 
+    def get_queryset(self):
+        """
+        Override the default queryset for GET method (list).
+        """
+        if self.action in ['list']:
+            return Project.objects.select_related('description').filter(is_published=True)
+        else:
+            return self.queryset
+
     def perform_create(self, serializer):
         """Automatically assigns project to correct startup based on user's token"""
         startup = StartupProfile.objects.filter(user=self.request.user).first()

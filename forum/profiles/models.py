@@ -24,6 +24,7 @@ class StartupProfile(models.Model):
         phone (PhoneNumberField): The startup's phone number in international format (optional).
         email (EmailField): The unique email address of the startup.
         description (TextField): A detailed description of the startup (max length: 1000 characters, optional).
+        is_public (BooleanField): Whether the startup is public or not.
         created_at (DateTimeField): The date and time the profile was created.
         updated_at (DateTimeField): The date and time the profile was last updated.
     """
@@ -38,6 +39,7 @@ class StartupProfile(models.Model):
     phone = PhoneNumberField(null=True, blank=True)
     email = models.EmailField(unique=True, db_index=True, validators=[validate_email])
     description = models.TextField(max_length=1000, blank=True, null=True)
+    is_public = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
