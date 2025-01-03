@@ -1,16 +1,18 @@
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.test import TestCase
-from profiles.models import StartupProfile, InvestorProfile
-from projects.models import Subscription, Project, User
+from projects.models import Subscription
+from .factories import (UserFactory, StartupProfileFactory,
+                    InvestorProfileFactory, ProjectFactory)
+
 
 class SubscriptionModelTest(TestCase):
     def setUp(self):
         # Create test user and project
-        self.user = User.objects.create_user(email="testuser@example.com", password="password")
-        self.startup = StartupProfile.objects.create(user=self.user, company_name="test company")
-        self.investor = InvestorProfile.objects.create(user=self.user)
-        self.project = Project.objects.create(startup=self.startup, funding_goal=Decimal("100.00"), is_completed=False)
+        self.user = UserFactory(email="testuser@example.com", password="password")
+        self.startup = StartupProfileFactory(user=self.user)
+        self.investor = InvestorProfileFactory(user=self.user)
+        self.project = ProjectFactory(startup=self.startup, funding_goal=Decimal("100.00"), is_completed=False)
 
     def test_valid_subscription(self):
         """Test that a valid subscription is successfully created."""
