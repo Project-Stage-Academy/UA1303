@@ -15,8 +15,3 @@ auth_urlpatterns = [
     path('me/', CustomUserViewSet.as_view({'get': 'retrieve'}), name='me'),
     path('password/reset/', password_reset_with_captcha, name='password_reset_captcha'),
 ]
-
-# urlpatterns = [
-#
-#     path('password/reset/', password_reset_with_captcha, name='password_reset_captcha'),
-# ]
