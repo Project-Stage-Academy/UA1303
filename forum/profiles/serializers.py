@@ -71,6 +71,20 @@ class StartupProfileSerializer(serializers.ModelSerializer):
         return data
 
 
+class PublicStartupProfileSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = StartupProfile
+        fields = [
+            'id',
+            'company_name',
+            'industry',
+            'country',
+            'city',
+            'description',
+        ]
+
+
 class PublicStartupFilterSerializer(serializers.ModelSerializer):
 
     class Meta:

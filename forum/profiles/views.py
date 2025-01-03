@@ -1,15 +1,16 @@
-from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Prefetch
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
+from django_filters.rest_framework import DjangoFilterBackend
 from django_ratelimit.decorators import ratelimit
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import status
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.generics import ListAPIView
 from rest_framework.mixins import ListModelMixin
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.serializers import Serializer
@@ -17,7 +18,7 @@ from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
 from .models import InvestorProfile, StartupProfile
 from .permissions import IsOwnerOrReadOnly
-from .serializers import InvestorProfileSerializer, StartupProfileSerializer, PublicStartupFilterSerializer
+from .serializers import InvestorProfileSerializer, StartupProfileSerializer, PublicStartupProfileSerializer, PublicStartupFilterSerializer
 from projects.models import Project
 
 
@@ -45,7 +46,7 @@ class StartupProfileViewSet(ModelViewSet):
     API Endpoint for Startup Profiles
     """
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
-    queryset = StartupProfile.objects.all()
+    queryset = StartupProfile.objects.all().order_by('company_name', 'created_at')
     serializer_class = StartupProfileSerializer
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -168,6 +169,28 @@ class SaveStartupViewSet(ListModelMixin, GenericViewSet):
             return Response({'detail': f'{startup} is not in favourites'}, status=status.HTTP_400_BAD_REQUEST)
         startup.followers.remove(investor)
         return Response({'detail': f'{startup} has been removed'}, status=status.HTTP_200_OK)
+
+
+class PublicStartupViewSet(ListModelMixin, GenericViewSet):
+    """Returns a list of public startups"""
+    serializer_class = PublicStartupProfileSerializer
+    queryset = StartupProfile.objects.filter(is_public=True)
+    pagination_class = PageNumberPagination
+
+    @swagger_auto_schema(tags=['Public Startups'])
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+
+class PublicStartupViewSet(ListModelMixin, GenericViewSet):
+    """Returns a list of public startups"""
+    serializer_class = PublicStartupProfileSerializer
+    queryset = StartupProfile.objects.filter(is_public=True)
+    pagination_class = PageNumberPagination
+
+    @swagger_auto_schema(tags=['Public Startups'])
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 class PublicStartupFilterViewSet(ListAPIView):

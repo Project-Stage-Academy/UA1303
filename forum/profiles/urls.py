@@ -1,19 +1,14 @@
 from rest_framework.routers import DefaultRouter, SimpleRouter
 
-from .views import InvestorViewSet, StartupProfileViewSet, SaveStartupViewSet, PublicStartupFilterViewSet
+from .views import InvestorViewSet, StartupProfileViewSet, SaveStartupViewSet, PublicStartupViewSet, PublicStartupFilterViewSet
 
 app_name = 'profiles'
 
-router_investor = DefaultRouter()
-router_investor.register(r'investor-profile', InvestorViewSet, basename='investor-profile')
+router = DefaultRouter()
+router.register(r'investor-profile', InvestorViewSet, basename='investor-profile')
+router.register('startup-profile', StartupProfileViewSet, basename='startup-profile')
+router.register('startups', SaveStartupViewSet, basename='startups')
+router.register('public-startups', PublicStartupViewSet, basename='public-startups')
+router.register('public-startups-filter', PublicStartupFilterViewSet, basename='public-startup-filter')
 
-router_startup = DefaultRouter()
-router_startup.register('startup-profile', StartupProfileViewSet, basename=app_name)
-
-router_startup_save = SimpleRouter()
-router_startup_save.register('startups', SaveStartupViewSet, basename='startups')
-
-router_public_startup_filter = DefaultRouter()
-router_public_startup_filter.register('public-startups-filter', PublicStartupFilterViewSet, basename='public-startup-filter')
-
-urlpatterns = router_investor.urls + router_startup.urls + router_startup_save.urls + router_public_startup_filter.urls
+urlpatterns = router.urls
