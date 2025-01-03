@@ -4,37 +4,59 @@ import os
 import sys
 import psycopg2
 from dotenv import load_dotenv
+from mongoengine import connect, Document
 
+load_dotenv()
 
-load_dotenv()  
-
-if not os.getenv('VIRTUAL_ENV'):
+if not os.getenv("VIRTUAL_ENV"):
     print("Warning: It seems like the virtual environment is not activated.")
 else:
     print("Virtual environmet activated")
 
 
-def check_database_connection():
+def check_database_connection_to_postgres():
     """Перевірка з'єднання з базою даних."""
     try:
         conn = psycopg2.connect(
-            dbname=os.getenv('DB_NAME'),
-            user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASSWORD'),
-            host=os.getenv('DB_HOST'),
-            port=os.getenv('DB_PORT'),
+            dbname=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            host=os.getenv("DB_HOST"),
+            port=os.getenv("DB_PORT"),
         )
         conn.close()
-        print("Database connection successful.")
+        print("Database connection to PostgresSQL successful.")
     except Exception as e:
-        print("Database connection error:", e)
-        exit(1)  
+        print("PostgreSql connection error:", e)
+        exit(1)
+
+
+def check_database_connection_to_mongo():
+    """Перевірка з'єднання з MongoDB."""
+    try:
+        connect(
+            db=os.getenv("MONGO_DB_NAME"),
+            host=os.getenv("MONGO_HOST"),
+            port=int(os.getenv("MONGO_PORT")),
+        )
+        print("Database connection to MongoDB successful.")
+
+        class Dummy(Document):
+            pass
+
+        Dummy.objects.first()
+        print("MongoDB is working.")
+
+    except Exception as e:
+        print("MongoDB connection error:", e)
+        exit(1)
 
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'forum.settings')
-    check_database_connection()
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "forum.settings")
+    check_database_connection_to_postgres()
+    check_database_connection_to_mongo()
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
@@ -46,5 +68,5 @@ def main():
     execute_from_command_line(sys.argv)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

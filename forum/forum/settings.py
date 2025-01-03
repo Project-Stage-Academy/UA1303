@@ -62,7 +62,6 @@ INSTALLED_APPS = [
     "dashboard",
     "notifications",
     "channels",
-    'django_mongoengine',
 ]
 
 MIDDLEWARE = [
@@ -111,12 +110,9 @@ AUTH_USER_MODEL = "users.CustomUser"
 # }
 
 connect(
-    db=os.getenv("MONGO_DB_NAME"),
-    host=os.getenv("MONGO_HOST"),
-    port=os.getenv("MONGO_PORT"),
-    username=os.getenv("MONGO_USERNAME"),
-    password=os.getenv("MONGO_PASSWORD"),
-    authentication_source="admin",
+    db=os.getenv("MONGO_DB_NAME"),  
+    host=os.getenv("MONGO_HOST"),    
+    port=int(os.getenv("MONGO_PORT"))
 )
 
 DATABASES = {

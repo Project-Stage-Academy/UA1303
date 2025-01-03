@@ -1,9 +1,9 @@
 import datetime
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.conf import settings
 from django_cryptography.fields import encrypt
 import mongoengine as me
+from datetime import datetime
 
 User = get_user_model()
 
@@ -51,11 +51,9 @@ User = get_user_model()
 #         super().save(*args, **kwargs)
 
 
-
-
 class Room(me.Document):
     name = me.StringField(max_length=128, required=True)
-    online = me.ListField(me.ReferenceField('User'))
+    online = me.ListField(me.ReferenceField("User"))
     created_at = me.DateTimeField(auto_now_add=True)
 
     def get_online_count(self):
@@ -80,7 +78,7 @@ class Room(me.Document):
 
 
 class Message(me.Document):
-    user = me.ReferenceField('User', required=True)
+    user = me.ReferenceField("User", required=True)
     room = me.ReferenceField(Room, required=True)
     content = me.StringField(max_length=512, required=True)
     timestamp = me.DateTimeField(default=datetime.utcnow)
@@ -88,3 +86,5 @@ class Message(me.Document):
     def clean(self):
         if len(self.content) > 512:
             raise me.ValidationError("Content must have less than 512 characters.")
+
+
