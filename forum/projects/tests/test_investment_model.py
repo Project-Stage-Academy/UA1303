@@ -14,7 +14,7 @@ class SubscriptionModelTest(TestCase):
         self.investor = InvestorProfileFactory(user=self.user)
         self.project = ProjectFactory(startup=self.startup, funding_goal=Decimal("100.00"), is_completed=False)
 
-    def test_valid_subscription(self):
+    def test_valid_investment(self):
         """Test that a valid investment is successfully created."""
         investment = Investment(investor=self.investor, project=self.project, share=Decimal("50.00"))
         investment.full_clean()  # Should not raise any ValidationError
@@ -63,3 +63,67 @@ class SubscriptionModelTest(TestCase):
 
         self.assertEqual(self.project.total_funding, Decimal("100.00"))
         self.assertFalse(self.project.is_completed)  # Assuming you update this separately
+
+    def test_multiple_investors_exceeding_goal(self):
+        """Test that multiple investors' investments do not exceed the funding goal."""
+        Investment.objects.create(investor=self.investor, project=self.project, share=Decimal("80.00"))
+
+        other_investor = InvestorProfileFactory()
+        investment = Investment(investor=other_investor, project=self.project, share=Decimal("30.00"))
+
+        with self.assertRaises(ValidationError):
+            investment.full_clean()
+
+    def test_large_number_of_small_investments(self):
+        """Test that many small investments are aggregated correctly."""
+        for _ in range(100):
+            Investment.objects.create(investor=self.investor, project=self.project, share=Decimal("1.00"))
+
+        self.assertEqual(self.project.total_funding, Decimal("100.00"))
+        investment = Investment(investor=self.investor, project=self.project, share=Decimal("1.00"))
+        with self.assertRaises(ValidationError):
+            investment.full_clean()
+
+    def test_decimal_precision(self):
+        """Test that investments with high precision are handled correctly."""
+        investment = Investment(
+            investor=self.investor, project=self.project, share=Decimal("50.123456")
+        )
+        with self.assertRaises(ValidationError):
+            investment.full_clean()
+
+    def test_investment_after_funding_completion(self):
+        """Test that investments cannot be made after funding is completed."""
+        Investment.objects.create(investor=self.investor, project=self.project, share=Decimal("100.00"))
+        self.project.is_completed = True
+        self.project.save()
+
+        investment = Investment(investor=self.investor, project=self.project, share=Decimal("10.00"))
+        with self.assertRaises(ValidationError):
+            investment.full_clean()
+
+    def test_multiple_investments_same_investor(self):
+        """Test that multiple investments by the same investor are allowed and aggregated."""
+        Investment.objects.create(investor=self.investor, project=self.project, share=Decimal("30.00"))
+        investment = Investment(investor=self.investor, project=self.project, share=Decimal("20.00"))
+
+        investment.full_clean()  # Should not raise ValidationError
+        investment.save()
+
+        self.assertEqual(self.project.total_funding, Decimal("50.00"))
+
+    def test_investment_with_nonexistent_investor(self):
+        """Test that investments cannot be created with an invalid investor."""
+        invalid_investor = None
+        investment = Investment(investor=invalid_investor, project=self.project, share=Decimal("50.00"))
+        with self.assertRaises(ValidationError):
+            investment.full_clean()
+
+    def test_investment_to_project_with_zero_funding_goal(self):
+        """Test that no investments can be made to a project with a funding goal of zero."""
+        self.project.funding_goal = Decimal("0.00")
+        self.project.save()
+
+        investment = Investment(investor=self.investor, project=self.project, share=Decimal("10.00"))
+        with self.assertRaises(ValidationError):
+            investment.full_clean()

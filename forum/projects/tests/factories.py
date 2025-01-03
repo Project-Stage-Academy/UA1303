@@ -25,6 +25,7 @@ class InvestorProfileFactory(DjangoModelFactory):
         model = InvestorProfile
 
     user = factory.SubFactory(UserFactory)
+    email = factory.Faker('email')
 
 
 class ProjectFactory(DjangoModelFactory):
