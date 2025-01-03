@@ -3,7 +3,7 @@ from rest_framework import status
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Project, Description
+from projects.models import Project, Description
 from profiles.models import StartupProfile
 
 User = get_user_model()
