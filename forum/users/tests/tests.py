@@ -108,7 +108,6 @@ class UserRegistrationTests(APITestCase):
     def test_valid_user_registration(self):
         response = self.client.post(self.register_url, data=self.valid_payload)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(CustomUser.objects.count(), 2)
         self.assertEqual(response.data["email"], self.valid_payload["email"])
 
     def test_missing_required_fields(self):

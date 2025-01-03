@@ -82,5 +82,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         verbose_name = "User"
         verbose_name_plural = "Users"
 
+    def get_full_name(self):
+        """Returns the user's full name."""
+        full_name = f"{self.first_name} {self.last_name}".strip()
+        return full_name if full_name else self.username
+
     def __str__(self):
         return f"id:{self.user_id} - {self.first_name} {self.last_name} (Role: {self.get_role_display()})"

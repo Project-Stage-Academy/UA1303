@@ -35,9 +35,17 @@ class ProjectTestCase(APITestCase):
             description='Some description',
         )
 
-        # Create project for user1
+        # Create published project for user1
         self.project1 = Project.objects.create(
             title='Test Project',
+            funding_goal='10000',
+            is_published=True,
+            startup_id=self.startup1.pk,
+        )
+
+        # Create unpublished project for user1
+        self.project1 = Project.objects.create(
+            title='Unpublished Project',
             funding_goal='10000',
             is_published=False,
             startup_id=self.startup1.pk,
@@ -269,3 +277,12 @@ class ProjectTestCase(APITestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Project.objects.filter(pk=self.project1.pk).exists())
+
+    def test_list_public_projects(self):
+        """Test for listing public projects"""
+        url = reverse('projects:projects-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        for project in response.data:
+            self.assertEqual(project['is_published'], True)

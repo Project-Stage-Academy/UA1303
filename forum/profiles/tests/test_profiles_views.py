@@ -1,13 +1,19 @@
+import random
+from operator import itemgetter
+
+import factory
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from faker import Faker
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
-from .models import InvestorProfile, StartupProfile
-from .serializers import InvestorProfileSerializer
+from profiles.models import InvestorProfile, StartupProfile
+from profiles.serializers import InvestorProfileSerializer
 
+faker = Faker()
 User = get_user_model()
 
 
@@ -337,7 +343,10 @@ class InvestorProfileOwnershipTest(APITestCase):
         super().tearDown()
 
 
-class ProfileTestCase(APITestCase):
+class StartupProfileTestCase(APITestCase):
+
+    url = 'profiles:startup-profile'
+
     def setUp(self):
         # Creating users. User1 is startup owner.
         self.user1 = User.objects.create_user(password='password1', email='user1@email.com')
@@ -369,13 +378,13 @@ class ProfileTestCase(APITestCase):
 
     def test_anonymous_get_startup_request(self):
         """Test that user can't access the protected endpoint without login."""
-        url = reverse('profiles:profiles-list')
+        url = reverse(f'{self.url}-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_anonymous_update_startup_profile(self):
         """Test that anonymous user cannot update startup profile."""
-        url = reverse('profiles:profiles-detail', kwargs={'pk': self.startup1.pk})
+        url = reverse(f'{self.url}-detail', kwargs={'pk': self.startup1.pk})
         data = {
             "company_name": "Renamed company",
             "industry": "transport",
@@ -393,14 +402,14 @@ class ProfileTestCase(APITestCase):
 
     def test_authenticated_startup_request(self):
         """Test that authenticated user can access the protected endpoint"""
-        url = reverse('profiles:profiles-list')
+        url = reverse(f'{self.url}-list')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_create_startup_profile(self):
         """Test that user 2 can create profile"""
-        url = reverse('profiles:profiles-list')
+        url = reverse(f'{self.url}-list')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
         data = {
             "company_name": "New company",
@@ -431,7 +440,7 @@ class ProfileTestCase(APITestCase):
 
     def test_create_startup_profile_required_fields(self):
         """Test that user 2 can create profile without optional fields"""
-        url = reverse('profiles:profiles-list')
+        url = reverse(f'{self.url}-list')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
         data = {
             "company_name": "New company",
@@ -452,7 +461,7 @@ class ProfileTestCase(APITestCase):
 
     def test_email_validation(self):
         """Test email validation"""
-        url = reverse('profiles:profiles-list')
+        url = reverse(f'{self.url}-list')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
         data = {
             "company_name": "New company",
@@ -471,7 +480,7 @@ class ProfileTestCase(APITestCase):
 
     def test_phone_validation(self):
         """Test phone validation"""
-        url = reverse('profiles:profiles-list')
+        url = reverse(f'{self.url}-list')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
         data = {
             "company_name": "New company",
@@ -490,7 +499,7 @@ class ProfileTestCase(APITestCase):
 
     def test_create_second_startup_profile(self):
         """Test that user1 can't create second profile"""
-        url = reverse('profiles:profiles-list')
+        url = reverse(f'{self.url}-list')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
         data = {
             "company_name": "Second company",
@@ -509,7 +518,7 @@ class ProfileTestCase(APITestCase):
 
     def test_partial_update_startup_profile(self):
         """Test for user to update existing profile"""
-        url = reverse('profiles:profiles-detail', kwargs={'pk': self.startup1.pk})
+        url = reverse(f'{self.url}-detail', kwargs={'pk': self.startup1.pk})
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
         data = {
             "company_name": "Renamed company",
@@ -531,20 +540,20 @@ class ProfileTestCase(APITestCase):
 
     def test_delete_startup_restricted(self):
         """Test for user to protect startup profiles from deletion if user is not a startup owner"""
-        url = reverse('profiles:profiles-detail', kwargs={'pk': self.startup1.pk})
+        url = reverse(f'{self.url}-detail', kwargs={'pk': self.startup1.pk})
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_anonymous_delete_startup_profile(self):
         """Test for user to protect startup profiles from deletion if user is not logged in"""
-        url = reverse('profiles:profiles-detail', kwargs={'pk': self.startup1.pk})
+        url = reverse(f'{self.url}-detail', kwargs={'pk': self.startup1.pk})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_delete_startup_profile(self):
         """Test for user to delete startup if user is a startup owner"""
-        url = reverse('profiles:profiles-detail', kwargs={'pk': self.startup1.pk})
+        url = reverse(f'{self.url}-detail', kwargs={'pk': self.startup1.pk})
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user1}')
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -552,7 +561,6 @@ class ProfileTestCase(APITestCase):
 
 
 class SaveProfileTestCase(APITestCase):
-
     save_startup_url = 'profiles:startups-save-favorite'
     unsave_startup_url = 'profiles:startups-delete-favorite'
 
@@ -667,7 +675,6 @@ class SaveProfileTestCase(APITestCase):
 
 
 class ListSavedProfilesTestCase(APITestCase):
-
     get_saved_startups_url = 'profiles:startups-list'
 
     def setUp(self):
@@ -829,3 +836,310 @@ class ListSavedProfilesTestCase(APITestCase):
         StartupProfile.objects.all().delete()
         User.objects.all().delete()
         super().tearDown()
+
+
+# Create a faker instance for generating fake data
+faker = Faker()
+
+
+class UserFactory(factory.django.DjangoModelFactory):
+    """
+    Factory class for generating fake User instances
+    """
+
+    class Meta:
+        model = User
+
+    email = factory.LazyAttribute(lambda _: faker.email())
+    password = factory.PostGenerationMethodCall('set_password', 'password123')
+
+
+class StartupProfileFactory(factory.django.DjangoModelFactory):
+    """
+    Factory class for generating fake StartupProfile instances
+    """
+
+    class Meta:
+        model = StartupProfile
+
+    user = factory.SubFactory(UserFactory)
+    company_name = factory.LazyAttribute(lambda _: faker.company())
+    industry = factory.Iterator(['Technology', 'Environmental', 'Education', 'AI'])
+    size = factory.Iterator(['Small', 'Medium', 'Large', 'Startup'])
+    country = factory.Iterator(['USA', 'Sweden', 'India', 'UK', 'Germany', 'France'])
+    city = factory.LazyAttribute(lambda _: faker.city())
+    zip_code = factory.LazyAttribute(lambda _: faker.zipcode())
+    address = factory.LazyAttribute(lambda _: faker.address())
+    phone = factory.LazyAttribute(lambda _: faker.phone_number())
+    email = factory.LazyAttribute(lambda _: faker.email())
+    description = factory.LazyAttribute(lambda _: faker.text(max_nb_chars=200))
+
+
+class StartupProfileFilterSearchSortTestCase(APITestCase):
+    """
+    Test case for filtering, searching, and sorting startup profiles via the API
+    """
+
+    startup_url = reverse('profiles:startup-profile-list')
+
+    def setUp(self):
+        """
+        Set up test data for each test using factory_boy
+        """
+        # Create users dynamically
+        self.users = UserFactory.create_batch(8)
+
+        # Generate JWT tokens for each user and store them in self.tokens
+        self.tokens = {
+            user.email: self.get_jwt_token(user) for user in self.users
+        }
+
+        # Create startup profiles for users with company names, including duplicates
+        self.startups = StartupProfileFactory.create_batch(
+            8,
+            user=factory.Iterator(self.users),
+            company_name=factory.Iterator([
+                'Tech Innovators', 'Tech Giants', 'Green Solutions',
+                'Eco Innovations', 'QuickStart', 'LearnHub',
+                'Duplicate Name', 'Duplicate Name'
+            ]),
+            country=factory.Iterator([
+                'USA', 'USA', 'Canada', 'Canada', 'UK', 'UK', 'USA', 'Canada'
+            ]),
+            city=factory.Iterator([
+                'New York', 'San Francisco', 'Toronto', 'Vancouver',
+                'London', 'Manchester', 'New York', 'Toronto'
+            ])
+        )
+
+    @staticmethod
+    def get_jwt_token(user):
+        """
+        Generate a JWT token for the specified user.
+        """
+        refresh = RefreshToken.for_user(user)
+        return str(refresh.access_token)
+
+    def perform_request_and_validate(self, query_params, token_email, validation_func):
+        """
+        Universal helper function to perform GET requests and validate results
+
+        Args:
+            query_params (str): Query parameters for the request (e.g., '?industry=Technology')
+            token_email (str): Email of the user to retrieve the JWT token
+            validation_func (Callable): A function to validate the retrieved data
+        """
+        url = f"{self.startup_url}{query_params}"
+        api_key = self.tokens.get(token_email)
+
+        if not api_key:
+            self.fail(f"Token for email {token_email} not found")
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {api_key}')
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreater(len(response.data), 0)
+        validation_func(response.data)
+
+    def test_filter_by_industry(self):
+        """
+        Test filtering by industry
+        """
+        user_email = random.choice(self.users).email
+        self.perform_request_and_validate(
+            query_params="?industry=Technology",
+            token_email=user_email,
+            validation_func=lambda data: self.assertTrue(
+                all('Technology' in startup['industry'] for startup in data)
+            )
+        )
+
+    def test_filter_by_country(self):
+        """
+        Test filtering by country
+        """
+        user_email = random.choice(self.users).email
+        self.perform_request_and_validate(
+            query_params="?country=USA",
+            token_email=user_email,
+            validation_func=lambda data: self.assertTrue(
+                all('USA' in startup['country'] for startup in data)
+            )
+        )
+
+    def test_filter_by_city(self):
+        """
+        Test filtering by city
+        """
+        user_email = random.choice(self.users).email
+        self.perform_request_and_validate(
+            query_params="?city=New York",
+            token_email=user_email,
+            validation_func=lambda data: self.assertTrue(
+                all('New York' in startup['city'] for startup in data)
+            )
+        )
+
+    def test_filter_by_size(self):
+        """
+        Test filtering by company size
+        """
+        user_email = random.choice(self.users).email
+        self.perform_request_and_validate(
+            query_params="?size=Large",
+            token_email=user_email,
+            validation_func=lambda data: self.assertTrue(
+                all('Large' in startup['size'] for startup in data)
+            )
+        )
+
+    def test_multiple_filters_industry_city(self):
+        """
+        Test filtering several fields: industry and city
+        """
+        user_email = random.choice(self.users).email
+        self.perform_request_and_validate(
+            query_params="?industry=Technology&city=New York",
+            token_email=user_email,
+            validation_func=lambda data: self.assertTrue(
+                all('Technology' in startup['industry'] for startup in data) and
+                all('New York' in startup['city'] for startup in data),
+            )
+        )
+
+    def test_multiple_filters_country_city(self):
+        """
+        Test filtering several fields: country and city
+        """
+        user_email = random.choice(self.users).email
+        self.perform_request_and_validate(
+            query_params="?country=USA&city=New York",
+            token_email=user_email,
+            validation_func=lambda data: self.assertTrue(
+                all('USA' in startup['country'] for startup in data) and
+                all('New York' in startup['city'] for startup in data),
+            )
+        )
+
+    def test_search_by_partial_company_name(self):
+        """
+        Test searching by partial company name using a substring from the objects
+        """
+        partial_name = self.startups[0].company_name[:5]  # Get a substring of the first company's name
+        user_email = random.choice(self.users).email
+        self.perform_request_and_validate(
+            query_params=f"?search={partial_name}",
+            token_email=user_email,
+            validation_func=lambda data: self.assertTrue(
+                any(partial_name in startup['company_name'] for startup in data)
+            )
+        )
+
+    def test_search_by_partial_industry(self):
+        """
+        Test searching by partial industry
+        """
+        partial_name = random.choice(self.startups).industry[:3]
+        user_email = random.choice(self.users).email
+        self.perform_request_and_validate(
+            query_params=f"?search={partial_name}",
+            token_email=user_email,
+            validation_func=lambda data: self.assertTrue(
+                any(partial_name in startup['industry'] for startup in data)
+            )
+        )
+
+    def test_search_by_partial_country(self):
+        """
+        Test searching by partial country
+        """
+        partial_name = random.choice(self.startups).country[:3]
+        user_email = random.choice(self.users).email
+        self.perform_request_and_validate(
+            query_params=f"?search={partial_name}",
+            token_email=user_email,
+            validation_func=lambda data: self.assertTrue(
+                any(partial_name in startup['country'] for startup in data)
+            )
+        )
+
+    def test_search_by_partial_city(self):
+        """
+        Test searching by partial city
+        """
+        partial_name = random.choice(self.startups).city[:4]
+        user_email = random.choice(self.users).email
+        self.perform_request_and_validate(
+            query_params=f"?search={partial_name}",
+            token_email=user_email,
+            validation_func=lambda data: self.assertTrue(
+                any(partial_name in startup['city'] for startup in data)
+            )
+        )
+
+    @staticmethod
+    def is_sorted_by_field(data, fields, reverse=False):
+        """
+        Helper method to check if a list of dictionaries is sorted by specific fields
+        `fields` can be a single field or a tuple of fields for secondary sorting
+        """
+        sorted_data = sorted(data, key=itemgetter(*fields))
+        return data == sorted_data
+
+    def test_sort_by_company_name(self):
+        """
+        Test sorting by company name
+        """
+        user_email = random.choice(self.users).email
+        self.perform_request_and_validate(
+            query_params="?ordering=company_name",
+            token_email=user_email,
+            validation_func=lambda data: self.assertTrue(
+                self.is_sorted_by_field(data, ['company_name']),
+                "Data is not sorted correctly by company_name"
+            )
+        )
+
+    def test_sort_by_created_at(self):
+        """
+        Test sorting by creation date
+        """
+        user_email = random.choice(self.users).email
+        self.perform_request_and_validate(
+            query_params="?ordering=created_at",
+            token_email=user_email,
+            validation_func=lambda data: self.assertTrue(
+                self.is_sorted_by_field(data, ['created_at']),
+                "Data is not sorted correctly by created_at"
+            )
+        )
+
+    def test_sort_by_created_at_with_duplicates(self):
+        """
+        Test sorting by "created_at" field with duplicate values
+        """
+        user_email = random.choice(self.users).email
+        self.perform_request_and_validate(
+            query_params="?ordering=created_at",
+            token_email=user_email,
+            validation_func=lambda data: self.assertTrue(
+                self.is_sorted_by_field(data, ['created_at', 'company_name']),
+                "Data is not sorted correctly by created_at with duplicates"
+            )
+        )
+
+    def test_unauthorized_access(self):
+        """
+        Test unauthorized access
+        """
+        url = f"{self.startup_url}?industry=Technology"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def tearDown(self):
+        """
+        Clean up after each test
+        """
+        StartupProfile.objects.all().delete()
+        User.objects.all().delete()
