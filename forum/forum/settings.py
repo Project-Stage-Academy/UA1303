@@ -259,7 +259,6 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "UPDATE_LAST_LOGIN": False,
-    "USER_ID_FIELD": "user_id",
     "ALGORITHM": "HS256",
     "SIGNING_KEY": os.getenv("JWT_SIGNING_KEY", SECRET_KEY),
     "AUDIENCE": None,
@@ -268,6 +267,8 @@ SIMPLE_JWT = {
     "JWK_URL": None,
     "LEEWAY": 0,
     "AUTH_HEADER_TYPES": ("JWT", "Bearer"),
+    'TOKEN_OBTAIN_SERIALIZER': 'users.serializers.CustomTokenObtainPairSerializer',
+    'USER_ID_FIELD': 'user_id'
 }
 
 

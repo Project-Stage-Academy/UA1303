@@ -3,6 +3,7 @@ from django.core.validators import validate_email
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
+from djoser.serializers import UserSerializer
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework import serializers, exceptions
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -83,6 +84,25 @@ class CustomUserSerializer(serializers.ModelSerializer):
         if value not in valid_roles:
             raise serializers.ValidationError("Invalid role.")
         return value
+
+    def to_representation(self, instance):
+        """Add current role from token payload"""
+        representation = super().to_representation(instance)
+
+        request = self.context.get('request')
+        auth_header = request.headers.get("Authorization")
+        try:
+            token = auth_header.split(" ")[1]
+        except IndexError:
+            raise exceptions.AuthenticationFailed("Invalid token format")
+        try:
+            access_token = AccessToken(token)
+            token_role_value = access_token.payload.get('role', None)
+            representation["token_role_value"] = token_role_value
+            representation['token_role'] = Role(token_role_value).name
+            return representation
+        except Exception as e:
+            raise exceptions.AuthenticationFailed(f"Error decoding token: {str(e)}")
 
 
 VALID_TOKEN_ROLES = [Role.STARTUP, Role.INVESTOR]
