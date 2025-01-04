@@ -181,7 +181,6 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_HSTS_SECONDS = 3600
 
 SECURE_SSL_REDIRECT = os.getenv("DJANGO_SECURE_SSL_REDIRECT", "True") == "True"
-
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 
 try:
@@ -246,7 +245,6 @@ LOGGING = {
 }
 
 # JWT settings
-
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=20),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
@@ -263,12 +261,14 @@ SIMPLE_JWT = {
     "LEEWAY": 0,
     "AUTH_HEADER_TYPES": ("JWT", "Bearer"),
 }
-
-
+# Custom user model
 AUTH_USER_MODEL = "users.CustomUser"
+
+# reCAPTCHA settings
 RECAPTCHA_PUBLIC_KEY = env("RECAPTCHA_PUBLIC_KEY")
 RECAPTCHA_PRIVATE_KEY = env("RECAPTCHA_PRIVATE_KEY")
 
+# Email settings
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = env("EMAIL_HOST")
 EMAIL_PORT = env.int("EMAIL_PORT")
@@ -277,9 +277,13 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
 
+# Rate limiting settings
 RATE_LIMIT_KEY = "ip"
 RATE_LIMIT_RATE = "5/m"
 RATE_LIMIT_BLOCK = True
+RATELIMIT_USE_CACHE = "default"  # Make sure RATELIMIT is reconfigured to use Redis when we add this type of caching
+
+# Domain settings
 DOMAIN_NAME = os.getenv("DOMAIN_NAME", "localhost")
 
 # Swagger settings to enable JWT authorization
@@ -295,8 +299,7 @@ SWAGGER_SETTINGS = {
     "USE_SESSION_AUTH": False,
 }
 
-
-# Daphne
+# Daphne settings
 ASGI_APPLICATION = "forum.asgi.application"
 CHANNEL_LAYERS = {
     "default": {
@@ -306,11 +309,11 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+# Caching settings
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         "LOCATION": "unique-snowflake",
     }
 }
-
-RATELIMIT_USE_CACHE = "default"  # Make sure RATELIMIT is reconfigured to use Redis when we add this type of caching
