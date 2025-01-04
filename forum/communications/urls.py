@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import CreateConversationView, SendMessageView, MessageHistoryView
+from .views import CreateConversationView,AddMessageView,MessageHistoryView
 
 from . import views
 
@@ -11,9 +11,9 @@ urlpatterns = [
     path(
         "conversations/", CreateConversationView.as_view(), name="create_conversation"
     ),
-    path("messages/", SendMessageView.as_view(), name="send_message"),
+    path("<str:room_id>/messages/", AddMessageView.as_view(), name="send_message"),
     path(
-        "conversations/<int:conversation_id>/messages/",
+        "conversations/<str:room_id>/messages/",
         MessageHistoryView.as_view(),
         name="message_history",
     ),
