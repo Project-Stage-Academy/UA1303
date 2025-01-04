@@ -77,6 +77,6 @@ djangorestframework-simplejwt==5.3.1
 django-environ==0.11.2
 django-filter==24.3
 mongoengine==0.29.1
-
+django-rest-framework-mongoengine==3.4.1
 
 

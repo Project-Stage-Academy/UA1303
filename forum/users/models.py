@@ -85,7 +85,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def get_full_name(self):
         """Returns the user's full name."""
         full_name = f"{self.first_name} {self.last_name}".strip()
-        return full_name if full_name else self.username
+        return full_name if full_name else self.first_name
 
     def __str__(self):
         return f"id:{self.user_id} - {self.first_name} {self.last_name} (Role: {self.get_role_display()})"

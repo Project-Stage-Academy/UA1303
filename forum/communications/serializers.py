@@ -24,3 +24,11 @@ class RoomSerializer(mongo_serializers.DocumentSerializer):
         model = Room
         fields = ["id", "name", "participants", "messages"]
         extra_kwargs = {"name": {"required": False}}
+
+    def validate_participants(self, value):
+        current_user = self.context["request"].user
+        if current_user.user_id not in value:
+            raise serializers.ValidationError(
+                "You must include yourself as a participant."
+            )
+        return value
