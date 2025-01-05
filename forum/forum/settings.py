@@ -237,9 +237,20 @@ LOGGING = {
         },
         '': {
             'handlers': ['console', 'forum_file'],
-            'level': 'DEBUG',
+            'level': 'INFO',
             'propagate': False,
         },
+        'faker': {
+            'handlers': ['console', 'forum_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'factory': {
+            'handlers': ['console', 'forum_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        
     },
 }
 
