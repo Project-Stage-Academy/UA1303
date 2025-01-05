@@ -85,25 +85,6 @@ class CustomUserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid role.")
         return value
 
-    def to_representation(self, instance):
-        """Add current role from token payload"""
-        representation = super().to_representation(instance)
-
-        request = self.context.get('request')
-        auth_header = request.headers.get("Authorization")
-        try:
-            token = auth_header.split(" ")[1]
-        except IndexError:
-            raise exceptions.AuthenticationFailed("Invalid token format")
-        try:
-            access_token = AccessToken(token)
-            token_role_value = access_token.payload.get('role', None)
-            representation["token_role_value"] = token_role_value
-            representation['token_role'] = Role(token_role_value).name
-            return representation
-        except Exception as e:
-            raise exceptions.AuthenticationFailed(f"Error decoding token: {str(e)}")
-
 
 VALID_TOKEN_ROLES = [Role.STARTUP, Role.INVESTOR]
 

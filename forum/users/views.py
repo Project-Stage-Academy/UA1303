@@ -18,6 +18,7 @@ from django.http import JsonResponse
 import logging
 from forum import settings
 from .serializers import PasswordResetSerializer, LogoutSerializer, CustomUserSerializer
+from .models import Role
 
 RATE_LIMIT_KEY = os.getenv("RATE_LIMIT_KEY", "ip")
 RATE_LIMIT_RATE = os.getenv("RATE_LIMIT_RATE", "5/m")
@@ -139,3 +140,11 @@ class CustomUserViewSet(UserViewSet):
 
     def get_object(self):
         return self.request.user
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+
+        token_role_value = self.request.auth.get('role')
+        token_role_name = Role(token_role_value).name
+        return Response({**serializer.data, 'role_value': token_role_value, 'role_name': token_role_name})
