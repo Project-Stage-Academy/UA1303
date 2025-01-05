@@ -3,6 +3,7 @@ from django.core.validators import validate_email
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
+from djoser.serializers import UserSerializer
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework import serializers, exceptions
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
