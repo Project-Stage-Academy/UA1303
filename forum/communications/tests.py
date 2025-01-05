@@ -1,25 +1,19 @@
-from django.test import TestCase
 from rest_framework.test import APITestCase
 from django.contrib.auth import get_user_model
 from rest_framework import status
-from unittest.mock import patch, MagicMock
-from rest_framework_simplejwt.tokens import RefreshToken
 from channels.testing import WebsocketCommunicator
 from .factories import *
 from .models import Room, Message
 from mongoengine.connection import get_db
 from bson import ObjectId
-
-from django.test import TestCase
 from channels.testing import WebsocketCommunicator
 from communications.consumers import ChatConsumer
 from mongoengine import connect, disconnect
-from communications.models import Room
 
 User = get_user_model()
 
 
-class TestChatConsumer(TestCase):
+class BaseMongoTestCase(APITestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -41,6 +35,10 @@ class TestChatConsumer(TestCase):
             name="room_1_2", participants=[self.user1.user_id, self.user2.user_id]
         )
         self.room.save()
+        self.client.force_authenticate(user=self.user1)
+
+
+class TestChatConsumer(BaseMongoTestCase):
 
     async def connect_to_chat(self, user):
         communicator = WebsocketCommunicator(
@@ -117,28 +115,7 @@ class TestChatConsumer(TestCase):
         self.assertFalse(connected)
 
 
-class RoomModelTest(TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        disconnect()
-        connect("forum_database_mongo_test", host="mongodb://localhost:27017")
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        db = get_db()
-        db.client.drop_database("forum_database_mongo_test")
-        disconnect()
-
-    def setUp(self):
-        self.user1 = User1Factory()
-        self.user2 = User2Factory()
-        self.room = Room(
-            name="room_1_2", participants=[self.user1.user_id, self.user2.user_id]
-        )
-        self.room.save()
+class RoomModelTest(BaseMongoTestCase):
 
     def test_room_name(self):
         self.assertEqual(self.room.name, "room_1_2")
@@ -157,61 +134,37 @@ class RoomModelTest(TestCase):
             self.room.participants, [self.user1.user_id, self.user2.user_id]
         )
 
-    # def test_get_users_names(self):
+    def test_get_users_names(self):
 
-    #     self.room.name = f"room_{self.user1.user_id}_{self.user2.user_id}"
-    #     self.room.save()
-    #     self.room.online.set([self.user1, self.user2])
-
-    #     expected_names = {
-    #         "user_1": self.user1.first_name,
-    #         "user_2": self.user2.first_name,
-    #     }
-    #     self.assertEqual(self.room.get_users_names(), expected_names)
+        expected_names = {
+            f"user_{self.user1.user_id}": self.user1.first_name,
+            f"user_{self.user2.user_id}": self.user2.first_name,
+        }
+        self.assertEqual(self.room.get_users_names(), expected_names)
 
     def test_leave_nonexistent_user(self):
         self.room.leave(self.user1)
         self.assertNotIn(self.user1, self.room.participants)
 
-    # def test_get_online_count_empty_room(self):
-    #     self.assertEqual(self.room.get_online_count(), 0)
+    def test_get_online_count_empty_room(self):
+        self.room.leave(self.user1)
+        self.assertEqual(self.room.get_online_count(), 1)
 
     def test_message_encryption(self):
         message = Message(user=self.user1, content="Hello!")
         self.assertEqual(message.content, "Hello!")
 
-    # def test_message_max_length(self):
-    #     long_message = "x" * 513
-    #     with self.assertRaises(ValueError):
-    #         Message(user=self.user1, content=long_message)
+    def test_message_max_length(self):
+        long_message = "x" * 513
+        message = Message(user=self.user1, content=long_message)
+        with self.assertRaises(Exception):
+            message.clean()
 
 
-class ChatAPITests(APITestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        disconnect()
-        connect("forum_database_mongo_test", host="mongodb://localhost:27017")
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        db = get_db()
-        db.client.drop_database("forum_database_mongo_test")
-        disconnect()
-
-    def setUp(self):
-        self.user1 = User1Factory()
-        self.user2 = User2Factory()
-        self.room = Room(
-            name="room_1_2", participants=[self.user1.user_id, self.user2.user_id]
-        )
-        self.room.save()
+class ChatAPITests(BaseMongoTestCase):
 
     def test_create_conversation(self):
         Room.objects.all().delete()
-        self.client.force_authenticate(user=self.user1)
         response = self.client.post(
             "/api/v1/communications/conversations/",
             {"participants": [self.user1.user_id, self.user2.user_id]},
@@ -219,7 +172,6 @@ class ChatAPITests(APITestCase):
         self.assertEqual(response.status_code, 201)
 
     def test_send_message(self):
-        self.client.force_authenticate(user=self.user1)
         response = self.client.post(
             f"/api/v1/communications/{ObjectId(self.room.id)}/messages/",
             {"user": self.user1.user_id, "content": "Hello!"},
@@ -228,7 +180,6 @@ class ChatAPITests(APITestCase):
         self.assertEqual(response.status_code, 201)
 
     def test_message_history(self):
-        self.client.force_authenticate(user=self.user2)
         response = self.client.post(
             f"/api/v1/communications/{ObjectId(self.room.id)}/messages/",
             {"user": self.user1.user_id, "content": "Hello!"},
@@ -242,7 +193,6 @@ class ChatAPITests(APITestCase):
 
     def test_create_room_with_invalid_participants(self):
         """Test creating a room with invalid participant data."""
-        self.client.force_authenticate(user=self.user1)
         response = self.client.post(
             "/api/v1/communications/conversations/", {"participants": [99999, 88888]}
         )
@@ -255,50 +205,27 @@ class ChatAPITests(APITestCase):
 
     def test_delete_non_existent_room(self):  # This need a fix
         """Test deleting a non-existent room."""
-        self.client.force_authenticate(user=self.user1)
         response = self.client.delete("/api/v1/communications/conversations/999/")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
-class PaginationTest(APITestCase):
+class PaginationTest(BaseMongoTestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        disconnect()
-        connect("forum_database_mongo_test", host="mongodb://localhost:27017")
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
+    def tearDown(self):
         db = get_db()
-        db.client.drop_database("forum_database_mongo_test")
-        disconnect()
+        db.drop_collection("room")
+        return super().tearDown()
 
-    def setUp(self):
-        self.user1 = User1Factory()
-        self.user2 = User2Factory()
-        self.room = Room(
-            name="room_1_2", participants=[self.user1.user_id, self.user2.user_id]
-        )
-        self.room.save()
-        self.client.force_authenticate(user=self.user1)
-        for i in range(10):
+    def test_pagination(self):
+        for _ in range(10):
             self.client.post(
                 f"/api/v1/communications/{ObjectId(self.room.id)}/messages/",
                 {"user": self.user1.user_id, "content": "Hello!"},
                 format="json",
             )
-
-    def tearDown(self):
-        return super().tearDown()
-
-    def test_pagination(self):
-        self.client.force_authenticate(user=self.user1)
         response = self.client.get(
             f"/api/v1/communications/conversations/{ObjectId(self.room.id)}/messages/",
         )
-        print(response.json())
         self.assertEqual(response.status_code, 200)
         self.assertIn("results", response.data)
         self.assertEqual(len(response.data["results"]), 10)
@@ -307,7 +234,7 @@ class PaginationTest(APITestCase):
 
     def test_pagination_fewer_than_ten_messages(self):
 
-        for i in range(5):
+        for _ in range(5):
             self.client.post(
                 f"/api/v1/communications/{ObjectId(self.room.id)}/messages/",
                 {"user": self.user1.user_id, "content": "Hello!"},
@@ -317,71 +244,56 @@ class PaginationTest(APITestCase):
         response = self.client.get(
             f"/api/v1/communications/conversations/{ObjectId(self.room.id)}/messages/"
         )
-        print(response.json())
         self.assertEqual(response.status_code, 200)
         self.assertIn("results", response.data)
         self.assertEqual(len(response.data["results"]), 5)
         self.assertEqual(response.data["next"], None)
 
-    # def test_pagination_last_page(self):
-    #     response = self.client.get(
-    #         f"/api/v1/communications/conversations/{self.room.id}/messages/?page=2",
-    #         HTTP_AUTHORIZATION=f"Bearer {self.token}",
-    #     )
+    def test_pagination_last_page(self):
+        for _ in range(11):
+            self.client.post(
+                f"/api/v1/communications/{ObjectId(self.room.id)}/messages/",
+                {"user": self.user1.user_id, "content": "Hello!"},
+                format="json",
+            )
+        response = self.client.get(
+            f"/api/v1/communications/conversations/{ObjectId(self.room.id)}/messages/?page=2",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("results", response.data)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["next"], None)
 
-    #     self.assertEqual(response.status_code, 200)
-    #     self.assertIn("results", response.data)
-    #     self.assertEqual(len(response.data["results"]), 1)
-    #     self.assertEqual(response.data["next"], None)
+    def test_pagination_invalid_page_number(self):
+        for _ in range(10):
+            self.client.post(
+                f"/api/v1/communications/{ObjectId(self.room.id)}/messages/",
+                {"user": self.user1.user_id, "content": "Hello!"},
+                format="json",
+            )
+        response = self.client.get(
+            f"/api/v1/communications/conversations/{self.room.id}/messages/?page=999"
+        )
 
-    # def test_pagination_invalid_page_number(self):
-    #     response = self.client.get(
-    #         f"/api/v1/communications/conversations/{self.room.id}/messages/?page=999",
-    #         HTTP_AUTHORIZATION=f"Bearer {self.token}",
-    #     )
-
-    #     self.assertEqual(response.status_code, 404)
-    #     self.assertIn("detail", response.data)
-    #     self.assertEqual(response.data["detail"], "Invalid page.")
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("detail", response.data)
+        self.assertEqual(response.data["detail"], "Invalid page.")
 
 
-# class MessageValidationTests(APITestCase):
-#     def setUp(self):
-#         self.user1 = User1Factory()
-#         self.user2 = User2Factory()
-#         self.room = Room(
-#             name="room_1_2", participants=[self.user1.user_id, self.user2.user_id]
-#         )
-#         self.room.online.add(self.user1, self.user2)
+class MessageValidationTests(BaseMongoTestCase):
 
-#         refresh = RefreshToken.for_user(self.user1)
-#         self.token = str(refresh.access_token)
-
-#     @patch("rest_framework_simplejwt.tokens.RefreshToken.for_user")
-#     def test_jwt_mocked(self, mock_refresh_token):
-#         mocked_token = MagicMock()
-#         mocked_token.access_token = "mocked_access_token"
-#         mock_refresh_token.return_value = mocked_token
-
-#         response = self.client.post(
-#             "/auth/jwt/create/", {"email": self.user1.email, "password": "password1"}
-#         )
-#         self.assertEqual(response.status_code, 200)
-#         self.assertEqual(response.data["access"], "mocked_access_token")
-
-#     def test_user_in_room_can_create_message(self):
-#         data = {
-#             "room": self.room.id,
-#             "user": self.user1.user_id,
-#             "content": "Hello, this is a test message!",
-#         }
-#         response = self.client.post(
-#             "/api/v1/communications/messages/",
-#             data=data,
-#             HTTP_AUTHORIZATION=f"Bearer {self.token}",
-#         )
-#         self.assertEqual(response.status_code, 201)
-#         message = Message.objects.last()
-#         self.assertEqual(message.content, data["content"])
-#         self.assertEqual(message.room, self.room)
-#         self.assertEqual(message.user, self.user1)
+    def test_user_in_room_can_create_message(self):
+        data = {
+            "user": self.user1.user_id,
+            "content": "Hello, this is a test message!",
+        }
+        response = self.client.post(
+            f"/api/v1/communications/{ObjectId(self.room.id)}/messages/",
+            data=data,
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        updated_room = Room.objects.get(id=self.room.id)
+        last_message = updated_room.messages[-1]
+        self.assertEqual(last_message.content, data["content"])
+        self.assertEqual(last_message.user, self.user1.user_id)

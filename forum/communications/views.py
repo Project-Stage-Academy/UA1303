@@ -3,8 +3,8 @@ from django.shortcuts import render
 from django.contrib.auth import get_user_model
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
-from .models import Room, Message
-from .serializers import RoomSerializer
+from .models import Room
+from .serializers import RoomSerializer, MessageSerializer
 from .permissions import IsParticipant
 from .paginations import MessagePagination
 from bson import ObjectId
@@ -12,7 +12,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.exceptions import NotFound, ValidationError
-from .serializers import MessageSerializer
 
 
 User = get_user_model()

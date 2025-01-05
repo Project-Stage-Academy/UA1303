@@ -1,6 +1,8 @@
 from mongoengine import Document, fields, EmbeddedDocument
 from datetime import datetime
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class Message(EmbeddedDocument):
@@ -11,6 +13,10 @@ class Message(EmbeddedDocument):
     def clean(self):
         if len(self.content) > 512:
             raise fields.ValidationError("Content must have less than 512 characters.")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
 
 class Room(Document):
@@ -28,38 +34,14 @@ class Room(Document):
             self.participants.remove(user.user_id)
             self.save()
 
+    def get_users_names(self):
+        participant_1 = User.objects.filter(pk=self.participants[0]).first()
+        participant_2 = User.objects.filter(pk=self.participants[1]).first()
 
-# from mongoengine import Document, IntField, StringField, SequenceField
+        return {
+            f"user_{self.participants[0]}": participant_1.first_name,
+            f"user_{self.participants[1]}": participant_2.first_name,
+        }
 
-
-# class Counter(Document):
-#     name = StringField(
-#         required=True, unique=True
-#     )  # Назва лічильника (наприклад, "user_id")
-#     value = IntField(default=0)  # Поточне значення лічильника
-
-
-# def get_next_sequence_value(sequence_name):
-#     counter = Counter.objects(name=sequence_name).modify(
-#         upsert=True,  # Створити новий документ, якщо він не існує
-#         new=True,  # Повернути оновлений документ
-#         inc__value=1,  # Збільшити значення на 1
-#     )
-#     return counter.value
-
-
-# class User(Document):
-#     user_id = fields.IntField(unique=True)
-#     email = fields.StringField(required=True)
-#     password = fields.StringField(required=True)
-
-#     def save(self, *args, **kwargs):
-#         if not self.user_id:  # Якщо user_id не встановлено
-#             self.user_id = get_next_sequence_value(
-#                 "user_id"
-#             )  # Отримати наступне значення
-#         super(User, self).save(*args, **kwargs)
-
-#     def set_password(self, raw_password):
-#         self.password = make_password(raw_password)
-#         self.save()
+    def get_online_count(self):
+        return len(self.participants)

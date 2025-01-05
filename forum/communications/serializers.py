@@ -12,6 +12,13 @@ class MessageSerializer(serializers.Serializer):
     def create(self, validated_data):
         return Message(**validated_data)
 
+    def validate_content(self, value):
+        if len(value) > 512:
+            raise serializers.ValidationError(
+                "Content must have less than 512 characters."
+            )
+        return value
+
 
 class RoomSerializer(mongo_serializers.DocumentSerializer):
     messages = serializers.ListField(

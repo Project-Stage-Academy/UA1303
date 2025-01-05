@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import CreateConversationView,AddMessageView,MessageHistoryView
+from .views import CreateConversationView, AddMessageView, MessageHistoryView
 
 from . import views
 
