@@ -5,6 +5,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
+from rest_framework import generics
+from rest_framework import exceptions
+from .models import StartUpNotification
+from .serializers import StartUpNotificationReadSerializer
+from .paginations import StandardResultsSetPagination
 
 from .models import NotificationType, NotificationPreference
 from .serializers import (
@@ -85,3 +90,44 @@ class NotificationPreferenceView(APIView):
             return Response({"detail": "Notification preferences deleted successfully."}, status=status.HTTP_200_OK)
         logger.warning(f"Attempted to delete preferences for non-existent user {request.user.username}")
         return Response({"detail": "Notification preferences not set."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class NotificationListView(generics.ListAPIView):
+    """
+    To get all notifications as a list of dicts
+    """
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+
+    def get_queryset(self):
+        if not hasattr(self.request.user, 'startup_profile'):
+            raise exceptions.NotFound("User does not have a startup profile.")
+
+        startup_id = self.request.user.startup_profile.id
+        return StartUpNotification.objects.filter(startup_id=startup_id).order_by('id')
+
+    serializer_class = StartUpNotificationReadSerializer
+
+    def get_serializer_context(self):
+        return {'request': self.request}
+    
+
+class NotificationDetailView(APIView):
+    """
+    To get a single notification and set 'is_read' to True
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id):
+        try:
+            notification = StartUpNotification.objects.get(id=id)
+
+            if request.user.startup_profile.id != notification.startup_id:
+                return Response({"error": "Access denied"}, status=status.HTTP_403_FORBIDDEN)
+
+            notification.is_read = True
+            notification.save()
+            serializer = StartUpNotificationReadSerializer(notification, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except StartUpNotification.DoesNotExist:
+            return Response({"detail": "Notification not found."}, status=status.HTTP_404_NOT_FOUND)
