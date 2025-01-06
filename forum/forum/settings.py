@@ -91,6 +91,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "forum.wsgi.application"
 
+
 AUTH_USER_MODEL = "users.CustomUser"
 
 

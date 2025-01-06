@@ -23,6 +23,7 @@ from .serializers import (
     LogoutSerializer,
     CustomUserSerializer
 )
+from .models import Role
 
 
 RATE_LIMIT_KEY = os.getenv("RATE_LIMIT_KEY", "ip")
@@ -198,3 +199,20 @@ class RegisterUserView(APIView):
             f"User registration validation failed. Errors: {serializer.errors}"
         )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CustomUserViewSet(UserViewSet):
+    """Custom endpoint to modify default Djoser's /me endpoint"""
+    permission_classes = [IsAuthenticated]
+    serializer_class = CustomUserSerializer
+
+    def get_object(self):
+        return self.request.user
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+
+        token_role_value = self.request.auth.get('role')
+        token_role_name = Role(token_role_value).name
+        return Response({**serializer.data, 'role_value': token_role_value, 'role_name': token_role_name})

@@ -85,19 +85,36 @@ class CustomUserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid role.")
         return value
 
-    def validate_first_name(self, value):
-        if len(value) > 30:
-            raise serializers.ValidationError(
-                "First name must not exceed 30 characters."
-            )
-        return value
 
-    def validate_last_name(self, value):
-        if len(value) > 30:
-            raise serializers.ValidationError(
-                "Last name must not exceed 30 characters."
-            )
-        return value
+VALID_TOKEN_ROLES = [Role.STARTUP, Role.INVESTOR]
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    role = serializers.ChoiceField(choices=[(role.value, role.name.lower()) for role in VALID_TOKEN_ROLES])
+
+    def validate(self, attrs):
+        data = super().validate(attrs)
+
+        request = self.context.get('request')
+        role = request.data.get('role')
+
+        if role is None:
+            raise exceptions.ValidationError({"role": "This field is required."})
+
+        try:
+            role = int(role)
+            if role not in [role.value for role in VALID_TOKEN_ROLES]:
+                raise ValueError
+        except (ValueError, TypeError):
+            raise exceptions.ValidationError({"role": "Invalid role specified."})
+
+        refresh = self.get_token(self.user)
+        refresh['role'] = role
+
+        data['access'] = str(refresh.access_token)
+        data['refresh'] = str(refresh)
+
+        return data
 
 
 class LogoutSerializer(serializers.Serializer):
