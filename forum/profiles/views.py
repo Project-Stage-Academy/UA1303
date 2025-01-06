@@ -182,25 +182,14 @@ class PublicStartupViewSet(ListModelMixin, GenericViewSet):
         return super().list(request, *args, **kwargs)
 
 
-class PublicStartupViewSet(ListModelMixin, GenericViewSet):
-    """Returns a list of public startups"""
-    serializer_class = PublicStartupProfileSerializer
-    queryset = StartupProfile.objects.filter(is_public=True)
-    pagination_class = PageNumberPagination
-
-    @swagger_auto_schema(tags=['Public Startups'])
-    def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
-
-
-class PublicStartupFilterViewSet(ListAPIView):
+class PublicStartupFilterViewSet(ListModelMixin, GenericViewSet):
+    "Returns a list of startups with optional filtering, search, and ordering capabilities."
     queryset = StartupProfile.objects.all()
     serializer_class = PublicStartupFilterSerializer
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
     filterset_fields = ['industry', 'country', 'city']
     search_fields = ['company_name', 'industry', 'country', 'city']
     ordering_fields = ['company_name', 'created_at']
-
 
     @swagger_auto_schema(tags=['Public Startups'])
     def list(self, request, *args, **kwargs):
