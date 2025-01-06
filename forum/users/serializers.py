@@ -3,6 +3,7 @@ from django.core.validators import validate_email
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
+from djoser.serializers import UserSerializer
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework import serializers, exceptions
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -86,36 +87,43 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
     def validate_first_name(self, value):
         if len(value) > 30:
-            raise serializers.ValidationError("First name must not exceed 30 characters.")
+            raise serializers.ValidationError(
+                "First name must not exceed 30 characters."
+            )
         return value
 
     def validate_last_name(self, value):
         if len(value) > 30:
-            raise serializers.ValidationError("Last name must not exceed 30 characters.")
+            raise serializers.ValidationError(
+                "Last name must not exceed 30 characters."
+            )
         return value
+
 
 class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField(required=True)
 
     def validate(self, data):
-        request = self.context.get('request')
-        auth_header = request.headers.get('Authorization', '')
+        request = self.context.get("request")
+        auth_header = request.headers.get("Authorization", "")
         access_token = auth_header.split()[1]
-        refresh_token = data.get('refresh')
-        
+        refresh_token = data.get("refresh")
+
         try:
             decoded_access_token = AccessToken(access_token)
-            user_id_from_access = decoded_access_token['user_id']
+            user_id_from_access = decoded_access_token["user_id"]
         except Exception as e:
             raise serializers.ValidationError({"access token error": str(e)})
 
         try:
             decoded_refresh_token = RefreshToken(refresh_token)
-            user_id_from_refresh = decoded_refresh_token['user_id']
+            user_id_from_refresh = decoded_refresh_token["user_id"]
         except Exception as e:
             raise serializers.ValidationError({"refresh token error": str(e)})
 
         if user_id_from_access != user_id_from_refresh:
-            raise serializers.ValidationError({"error": "User ID mismatch between tokens."})
+            raise serializers.ValidationError(
+                {"error": "User ID mismatch between tokens."}
+            )
 
         return data
