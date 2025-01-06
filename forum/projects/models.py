@@ -2,8 +2,12 @@ from PIL import Image
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxLengthValidator
+from django.contrib.auth import get_user_model
 from django.db import models
-from profiles.models import StartupProfile
+from profiles.models import StartupProfile, InvestorProfile
+
+
+User = get_user_model()
 
 
 def validate_image(file):
@@ -67,6 +71,14 @@ class Project(models.Model):
             f")"
         )
 
+    @property
+    def total_funding(self) -> Decimal:
+        self.subscriptions: models.manager.RelatedManager # a little type annotation
+
+        total_shares = self.subscriptions.aggregate(total=models.Sum('share', default=0))['total']
+        return total_shares
+
+
 
 class Media(models.Model):
     """
@@ -101,3 +113,49 @@ class Description(models.Model):
 
     def __str__(self):
         return f"Description(id={self.pk}, startup={self.project.startup.company_name}, project={self.project.title}, description={self.description})"
+
+
+class Investment(models.Model):
+    investor = models.ForeignKey(
+        InvestorProfile, 
+        on_delete=models.CASCADE, 
+        related_name='subscriptions', 
+        db_index=True
+        )
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='subscriptions')
+    share = models.DecimalField(
+        max_digits=15, 
+        decimal_places=2, 
+        )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=models.Q(share__gt=0), name="share_positive", violation_error_message="Share must be greater than zero."),
+        ]
+    
+    def clean_share(self):
+        """
+        Validate that `share` is within the range [0, `project.funding_goal`].
+        """
+        if self.share > self.project.funding_goal:
+            raise ValidationError("Share cannot exceed the project's funding goal.")
+        
+        if self.share <= 0:
+            raise ValidationError("Share cannot be negative or zero.")
+
+
+    def clean(self):
+        """
+        Validate that the total funding from all subscriptions (including this one)
+        does not exceed the project's funding goal.
+        """
+        super().clean()
+
+        if self.project.is_completed:
+            raise ValidationError("Project is already completely funded.")
+        
+        EXCEEDS_REMAINING_FUNDS = (self.project.funding_goal - self.project.total_funding) < self.share
+        if EXCEEDS_REMAINING_FUNDS:
+            raise ValidationError("Share exceeds the remaining funding goal.")
+    

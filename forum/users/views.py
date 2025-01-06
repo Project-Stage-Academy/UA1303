@@ -8,6 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import APIException
 from rest_framework import status
+from djoser.views import UserViewSet
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -17,6 +18,7 @@ from django.http import JsonResponse
 import logging
 from forum import settings
 from .serializers import PasswordResetSerializer, LogoutSerializer, CustomUserSerializer
+from .models import Role
 
 RATE_LIMIT_KEY = os.getenv("RATE_LIMIT_KEY", "ip")
 RATE_LIMIT_RATE = os.getenv("RATE_LIMIT_RATE", "5/m")
@@ -43,6 +45,7 @@ def password_reset_with_captcha(request):
         return JsonResponse({"detail": "If the email exists, a reset link was sent."}, status=200)
     return JsonResponse({"errors": serializer.errors}, status=400)
 
+
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -64,7 +67,6 @@ class LogoutView(APIView):
             400: "Invalid or missing refresh token",
         }
     )
-
     def post(self, request):
         serializer = LogoutSerializer(data=request.data, context={'request': request})
         
@@ -117,7 +119,6 @@ class RegisterUserView(APIView):
                 }
                 return Response(response_data, status=status.HTTP_201_CREATED)
 
-
             except APIException as e:
                 logger.error(f"API error during signup: {e}")
                 raise
@@ -130,3 +131,20 @@ class RegisterUserView(APIView):
             f"User registration validation failed. Errors: {serializer.errors}"
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CustomUserViewSet(UserViewSet):
+    """Custom endpoint to modify default Djoser's /me endpoint"""
+    permission_classes = [IsAuthenticated]
+    serializer_class = CustomUserSerializer
+
+    def get_object(self):
+        return self.request.user
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+
+        token_role_value = self.request.auth.get('role')
+        token_role_name = Role(token_role_value).name
+        return Response({**serializer.data, 'role_value': token_role_value, 'role_name': token_role_name})
