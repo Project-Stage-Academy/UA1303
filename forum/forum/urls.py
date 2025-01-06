@@ -25,7 +25,6 @@ from drf_yasg import openapi
 from users.urls import auth_urlpatterns
 
 APP_URLS = [
-    ('users', 'users.urls'),
     ('communications', 'communications.urls'),
     ('dashboard', 'dashboard.urls'),
     ('notifications', 'notifications.urls'),
@@ -65,6 +64,4 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-    re_path(r'^auth/', include('djoser.urls')),
-    re_path(r'^auth/', include('djoser.urls.jwt')),
 ] + api_urlpatterns
