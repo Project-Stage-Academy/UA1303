@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from .models import NotificationMethod, NotificationCategory, NotificationPreference
-from .serializers import (
+from ..models import NotificationMethod, NotificationCategory, NotificationPreference
+from ..serializers import (
     NotificationMethodSerializer,
     NotificationCategorySerializer,
     NotificationPreferenceSerializer,

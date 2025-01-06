@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import NotificationMethod, NotificationCategory, NotificationPreference
+from .models import NotificationMethod, NotificationCategory, NotificationPreference, NotificationForUpdates
 
 
 class NotificationMethodSerializer(serializers.ModelSerializer):
@@ -56,3 +56,9 @@ class NotificationPreferenceUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = NotificationPreference
         fields = ["allowed_notification_methods", "allowed_notification_categories"]
+
+
+class NotificationForUpdatesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NotificationForUpdates
+        fields = ['id', 'message', 'notification_type', 'startup_profile', 'project', 'created_at', 'is_read']
