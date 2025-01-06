@@ -4,6 +4,8 @@ from ..models import StartUpNotification
 from ..serializers import StartUpNotificationReadSerializer, StartUpNotificationCreateSerializer
 from ..factories import StartUpNotificationFactory, NotificationTypeFactory, InvestorProfileFactory, StartupProfileFactory
 from django.urls import reverse
+from django.test import RequestFactory
+
 
 class StartUpNotificationSerializerTests(APITestCase):
     def setUp(self):
@@ -15,14 +17,15 @@ class StartUpNotificationSerializerTests(APITestCase):
             investor=self.investor,
             startup=self.startup,
         )
-        
-    ## TODO:
-    # def test_startup_notification_read_serializer(self):
-    #     serializer = StartUpNotificationReadSerializer(instance=self.notification)
-    #     self.assertEqual(serializer.data["notification_type"], str(self.notification_type))
-    #     self.assertEqual(serializer.data["investor"], str(self.investor))
-    #     self.assertEqual(serializer.data["is_read"], self.notification.is_read)
-    #     self.assertEqual(serializer.data["created_at"], self.notification.created_at.strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
+
+    def test_startup_notification_read_serializer(self):
+        request = RequestFactory().get('/')
+
+        serializer = StartUpNotificationReadSerializer(instance=self.notification, context={'request': request})
+        self.assertEqual(serializer.data["notification_type"], self.notification_type.name)
+        self.assertEqual(serializer.data["investor"], str(self.investor))
+        self.assertEqual(serializer.data["is_read"], self.notification.is_read)
+        self.assertEqual(serializer.data["created_at"], self.notification.created_at.strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
 
     def test_startup_notification_create_serializer_valid_data(self):
         data = {
