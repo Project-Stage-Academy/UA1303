@@ -60,6 +60,11 @@ INSTALLED_APPS = [
     "dashboard",
     "notifications",
     "channels",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.github",
+    "allauth.socialaccount.providers.google",
 ]
 
 MIDDLEWARE = [
@@ -71,6 +76,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "forum.urls"
@@ -323,3 +329,23 @@ CACHES = {
 
 RATELIMIT_USE_CACHE = "default"  # Make sure RATELIMIT is reconfigured to use Redis when we add this type of caching
 
+
+# Django-allauth settings
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'EMAIL_AUTHENTICATION': True,
+        'APP': {
+            'client_id': os.getenv("GOOGLE_OAUTH_CLIENT_ID"),
+            'secret': os.getenv("GOOGLE_OAUTH_CLIENT_SECRET")
+        }
+    },
+    'github': {
+        'EMAIL_AUTHENTICATION': True,
+        'APP': {
+            'client_id': os.getenv("GITHUB_OAUTH_CLIENT_ID"),
+            'secret': os.getenv("GITHUB_OAUTH_CLIENT_SECRET")
+        }
+    }
+}
+
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
