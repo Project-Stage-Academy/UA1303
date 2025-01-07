@@ -57,6 +57,11 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 
 class InvestmentCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating an investment.
+    This serializer is responsible for validating and saving investment data.
+    It expects only the 'share' field to be provided by the user.
+    """
     class Meta:
         model = Investment
-        fields = ['id', 'share', 'project', 'investor', 'created_at']
+        fields = ['share']
