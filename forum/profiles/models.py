@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, validate_email
 from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
+from django_countries.fields import CountryField
 
 User = get_user_model()
 
@@ -32,7 +33,7 @@ class StartupProfile(models.Model):
     company_name = models.CharField(max_length=200)
     industry = models.CharField(max_length=100)
     size = models.CharField(max_length=50)
-    country = models.CharField(max_length=50)
+    country = CountryField()
     city = models.CharField(max_length=50)
     zip_code = models.CharField(max_length=20)
     address = models.CharField(max_length=250, blank=True, null=True)
@@ -79,7 +80,7 @@ class InvestorProfile(models.Model):
         updated_at (DateTimeField): The date and time the profile was last updated.
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="investor_profile", db_index=True)
-    country = models.CharField(max_length=50)
+    country = CountryField(default='UA')
     city = models.CharField(max_length=50)
     zip_code = models.CharField(max_length=20)
     address = models.CharField(max_length=250, blank=True, null=True)

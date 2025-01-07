@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "dashboard",
     "notifications",
     "channels",
+    'django_countries',
 ]
 
 MIDDLEWARE = [
