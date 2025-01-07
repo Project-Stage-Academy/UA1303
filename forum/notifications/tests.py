@@ -19,6 +19,15 @@ from .views import ROLE_CATEGORIES
 User = get_user_model()
 
 
+def send_get_request_with_role(self, user, role, url):
+    """
+    Helper method to send get request with authorization using the role.
+    Returns response json
+    """
+    auth_header = generate_auth_header(user, role)
+    return self.client.get(url, **auth_header).json()
+
+
 def create_db_data(cls):
     """Helper method to create common used set of database data"""
     create_categories(cls)
@@ -526,10 +535,8 @@ class TestComponentNotificationCategoryEndpoint(APITestCase):
     def tearDownClass(cls):
         super().tearDownClass()
 
-    def test_show_categories_startup(self):
-        role = 1
-        auth_header = generate_auth_header(self.user, role)
-        response_json = self.client.get(self.url, **auth_header).json()
+    def verify_user_categories(self, role):
+        response_json = send_get_request_with_role(self, self.user, role, self.url)
         response_categories = [category["name"] for category in response_json]
         actual = all(
             response_category in ROLE_CATEGORIES.get(role, [])
@@ -537,30 +544,17 @@ class TestComponentNotificationCategoryEndpoint(APITestCase):
         )
         self.assertTrue(
             actual,
-            "Details: Some of categories in the response are not related with this role.",
+            f"Details: Some categories in the response are not related to role {role}.",
         )
+
+    def test_show_categories_startup(self):
+        self.verify_user_categories(role=1)
 
     def test_show_categories_investor(self):
-        role = 2
-        auth_header = generate_auth_header(self.user, role)
-        response_json = self.client.get(self.url, **auth_header).json()
-        response_categories = [category["name"] for category in response_json]
-        actual = all(
-            response_category in ROLE_CATEGORIES.get(role, [])
-            for response_category in response_categories
-        )
-        self.assertTrue(
-            actual,
-            "Details: Some of categories in the response are not related with this role.",
-        )
+        self.verify_user_categories(role=2)
 
     def test_show_categories_not_set_for_role(self):
-        role = 333
-        auth_header = generate_auth_header(self.user, role)
-        response_json = self.client.get(self.url, **auth_header).json()
-        self.assertEqual(
-            response_json, [], "Details: Response categories list must be empty."
-        )
+        self.verify_user_categories(role=333)
 
 
 class TestComponentNotificationPreferenceEndpoint(APITestCase):
@@ -573,9 +567,7 @@ class TestComponentNotificationPreferenceEndpoint(APITestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        create_user(cls)
-        create_categories(cls)
-        create_methods(cls)
+        create_db_data(cls)
         cls.preference = NotificationPreference.objects.get_or_create(user=cls.user)[0]
         cls.preference.allowed_notification_methods.add(cls.telegramMethod)
         cls.preference.allowed_notification_methods.add(cls.popupMethod)
@@ -589,10 +581,25 @@ class TestComponentNotificationPreferenceEndpoint(APITestCase):
     def tearDownClass(cls):
         super().tearDownClass()
 
+    def verify_user_preference(self, role):
+        """
+        Helper method to verify user preferences based on the role.
+        """
+        response_json = send_get_request_with_role(self, self.user, role, self.url)
+        response_categories = response_json["allowed_notification_categories"]
+        response_category_names = [category["name"] for category in response_categories]
+        actual = all(
+            response_category in ROLE_CATEGORIES.get(role, [])
+            for response_category in response_category_names
+        )
+        self.assertTrue(
+            actual,
+            f"Details: Some categories in the response are not related to role {role}.",
+        )
+
     def test_get_user_preference(self):
         role = 1
-        auth_header = generate_auth_header(self.user, role)
-        response_json = self.client.get(self.url, **auth_header).json()
+        response_json = send_get_request_with_role(self, self.user, role, self.url)
         response_user = response_json["user"]
         self.assertEqual(
             response_user,
@@ -601,31 +608,7 @@ class TestComponentNotificationPreferenceEndpoint(APITestCase):
         )
 
     def test_user_startup_preference(self):
-        role = 1
-        auth_header = generate_auth_header(self.user, role)
-        response_json = self.client.get(self.url, **auth_header).json()
-        response_categories = response_json["allowed_notification_categories"]
-        response_category_names = [category["name"] for category in response_categories]
-        actual = all(
-            response_category in ROLE_CATEGORIES.get(role, [])
-            for response_category in response_category_names
-        )
-        self.assertTrue(
-            actual,
-            "Details: Some of categories in the response are not related with this role.",
-        )
+        self.verify_user_preference(role=1)
 
     def test_user_investor_preference(self):
-        role = 2
-        auth_header = generate_auth_header(self.user, role)
-        response_json = self.client.get(self.url, **auth_header).json()
-        response_categories = response_json["allowed_notification_categories"]
-        response_category_names = [category["name"] for category in response_categories]
-        actual = all(
-            response_category in ROLE_CATEGORIES.get(role, [])
-            for response_category in response_category_names
-        )
-        self.assertTrue(
-            actual,
-            "Details: Some of categories in the response are not related with this role.",
-        )
+        self.verify_user_preference(role=2)

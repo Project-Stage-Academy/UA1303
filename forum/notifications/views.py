@@ -168,7 +168,7 @@ class NotificationPreferenceView(APIView):
         if preferences:
             logger.info(f"Preferences retrieved for user {request.user.email}")
             serializer = NotificationPreferenceSerializer(preferences)
-            data = self._filter_categories_dict_by_role(request, serializer.data)
+            data = RoleLayer.filter_categories_dict_by_role(request, serializer.data)
             return Response(data, status=status.HTTP_200_OK)
 
         logger.warning(f"No preferences found for user {request.user.email}")
@@ -188,14 +188,14 @@ class NotificationPreferenceView(APIView):
                 {"detail": "No data provided."}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        if not self._check_update_possibility(request):
+        if not RoleLayer.can_update_categories(request):
             return Response(
                 {"detail": "You cant change some categories with current role."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         preferences = NotificationPreference.objects.get_or_create(user=request.user)[0]
-        data = self._update_categories_dict(request, preferences)
+        data = RoleLayer.update_categories_dict(request, preferences)
         serializer = NotificationPreferenceUpdateSerializer(preferences, data=data)
 
         if serializer.is_valid():
@@ -239,13 +239,95 @@ class NotificationPreferenceView(APIView):
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    def _update_categories_dict(self, request, preference_instance):
+
+class RoleLayer:
+    """
+    Helper class to work with jsons. Provides methods for extending of functionality
+    with role restrictions.
+    """
+
+    @classmethod
+    def can_update_categories(cls, request):
+        """
+        Helper method for PUT HTTP. Allows checking if all categories
+        we want to update can be updated with the current role.
+
+        Checks if all categories in "allowed_notification_categories" exists
+        in list of categories for this role in ROLE_CATEGORIES.
+
+        Takes:
+        - PUT request with body:
+            {
+                "allowed_notification_methods": [
+                    1, 2
+                ],
+                "allowed_notification_categories": [
+                    1, 2, 3, 4
+                ]
+            }
+
+        Returns:
+        - True if all categories in response exists in the list for current
+        category in ROLE_CATEGORIES
+        - False if some categories in response are not in the list for current
+        category in ROLE_CATEGORIES
+        """
+        role = request.auth.get("role")
+        categories_to_modify = ROLE_CATEGORIES.get(role, [])
+        request_categories = request.data.get("allowed_notification_categories")
+        request_categories = [
+            NotificationCategory.objects.get(id=category).name
+            for category in request_categories
+        ]
+        return all(category in categories_to_modify for category in request_categories)
+
+    @classmethod
+    def filter_categories_dict_by_role(cls, request, preference_dict):
+        """
+        Helper method for GET HTTP. Allows to show categories in preference
+        related to the current role. Returns dict which can be serilized.
+
+        Removes all not related to this role categories in json which
+        will be pushed to response.
+
+        Takes:
+        - PUT request with next part in body:
+                "allowed_notification_categories": [
+                    1, 2, 3, 4
+                ]
+
+        Returns:
+        - Filtered request json with relevant categories. Part of body:
+                "allowed_notification_categories": [
+                    1, 4
+                ]
+        """
+        role = request.auth.get("role")
+        preference_data = preference_dict.copy()
+        preference_data["allowed_notification_categories"] = [
+            category
+            for category in preference_data["allowed_notification_categories"]
+            if category["name"] in ROLE_CATEGORIES.get(role, [])
+        ]
+        return preference_data
+
+    @classmethod
+    def update_categories_dict(cls, request, preference_instance):
         """
         Helper method for PUT HTTP. Allows change categories related
         to current role and do not rewrite another role categories
         at the same time. Returns dict which can be serilized.
-        """
 
+        Takes preference,serializing it and then works with this json.
+
+        Takes:
+        - Instance of preference
+
+        Returns:
+        - Json of serialized preference without changing of categories
+        for other roles but with rewrited categories for current role.
+        Depends on request
+        """
         role = request.auth.get("role")
         current_data = request.data.copy()
         serializer = NotificationPreferenceSerializer(preference_instance)
@@ -258,33 +340,3 @@ class NotificationPreferenceView(APIView):
         new_categories += request.data["allowed_notification_categories"]
         current_data["allowed_notification_categories"] = new_categories
         return current_data
-
-    def _filter_categories_dict_by_role(self, request, preference_dict):
-        """
-        Helper method for GET HTTP. Allows to show categories in preference
-        related to the current role. Returns dict which can be serilized.
-        """
-
-        role = request.auth.get("role")
-        preference_data = preference_dict.copy()
-        preference_data["allowed_notification_categories"] = [
-            category
-            for category in preference_data["allowed_notification_categories"]
-            if category["name"] in ROLE_CATEGORIES.get(role, [])
-        ]
-        return preference_data
-
-    def _check_update_possibility(self, request):
-        """
-        Helper method for PUT HTTP. Allows you to check if the
-        categories to be modified match this role. Returns True or False
-        """
-
-        role = request.auth.get("role")
-        categories_to_modify = ROLE_CATEGORIES.get(role, [])
-        request_categories = request.data.get("allowed_notification_categories")
-        request_categories = [
-            NotificationCategory.objects.get(id=category).name
-            for category in request_categories
-        ]
-        return all(category in categories_to_modify for category in request_categories)
