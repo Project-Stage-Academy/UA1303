@@ -83,16 +83,3 @@ class PublicStartupProfileSerializer(serializers.ModelSerializer):
             'city',
             'description',
         ]
-
-
-class PublicStartupFilterSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = StartupProfile
-        fields = [
-            'id',
-            'company_name',
-            'industry',
-            'country',
-            'city',
-        ]

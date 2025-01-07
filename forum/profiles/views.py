@@ -18,7 +18,7 @@ from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
 from .models import InvestorProfile, StartupProfile
 from .permissions import IsOwnerOrReadOnly
-from .serializers import InvestorProfileSerializer, StartupProfileSerializer, PublicStartupProfileSerializer, PublicStartupFilterSerializer
+from .serializers import InvestorProfileSerializer, StartupProfileSerializer, PublicStartupProfileSerializer
 from projects.models import Project
 
 
@@ -172,20 +172,11 @@ class SaveStartupViewSet(ListModelMixin, GenericViewSet):
 
 
 class PublicStartupViewSet(ListModelMixin, GenericViewSet):
-    """Returns a list of public startups"""
+    """Returns a list of public startups with optional filtering, search, and ordering capabilities."""
     serializer_class = PublicStartupProfileSerializer
     queryset = StartupProfile.objects.filter(is_public=True)
     pagination_class = PageNumberPagination
 
-    @swagger_auto_schema(tags=['Public Startups'])
-    def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
-
-
-class PublicStartupFilterViewSet(ListModelMixin, GenericViewSet):
-    "Returns a list of startups with optional filtering, search, and ordering capabilities."
-    queryset = StartupProfile.objects.all()
-    serializer_class = PublicStartupFilterSerializer
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
     filterset_fields = ['industry', 'country', 'city']
     search_fields = ['company_name', 'industry', 'country', 'city']
@@ -193,4 +184,10 @@ class PublicStartupFilterViewSet(ListModelMixin, GenericViewSet):
 
     @swagger_auto_schema(tags=['Public Startups'])
     def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
+        try:
+            return super().list(request, *args, **kwargs)
+        except Exception as e:
+            return Response(
+                {'error': '"Invalid filter or search parameter."'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
