@@ -1,5 +1,8 @@
 import os
 import requests
+from django.conf import settings
+from django_ratelimit.decorators import ratelimit
+from django.http import JsonResponse
 
 from rest_framework.decorators import api_view
 from rest_framework.views import APIView
@@ -8,15 +11,22 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import APIException
 from rest_framework import status
+from djoser.views import UserViewSet
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from .utils import verify_captcha
+from .serializers import (
+    PasswordResetSerializer,
+    LogoutSerializer,
+    CustomUserSerializer
+)
+from .models import Role
 
 from django_ratelimit.decorators import ratelimit
 from django.http import JsonResponse
 
 import logging
 from forum import settings
-from .serializers import PasswordResetSerializer, LogoutSerializer, CustomUserSerializer
 
 RATE_LIMIT_KEY = os.getenv("RATE_LIMIT_KEY", "ip")
 RATE_LIMIT_RATE = os.getenv("RATE_LIMIT_RATE", "5/m")
@@ -25,23 +35,83 @@ RATE_LIMIT_BLOCK = os.getenv("RATE_LIMIT_BLOCK", "True").lower() == "true"
 logger = logging.getLogger(__name__)
 
 
-def verify_captcha(captcha_response):
-    payload = {'secret': settings.RECAPTCHA_PRIVATE_KEY, 'response': captcha_response}
-    r = requests.post('https://www.google.com/recaptcha/api/siteverify', data=payload)
-    return r.json().get('success', False)
-
-
+@swagger_auto_schema(
+    method="post",
+    operation_summary="Password reset with CAPTCHA",
+    operation_description="This endpoint allows users to request a password reset with CAPTCHA verification.",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            "email": openapi.Schema(
+                type=openapi.TYPE_STRING,
+                format="email",
+                description="User email address",
+            ),
+            "g-recaptcha-response": openapi.Schema(
+                type=openapi.TYPE_STRING, description="ReCAPTCHA response token"
+            ),
+        },
+        required=["email", "g-recaptcha-response"],
+    ),
+    responses={
+        200: openapi.Response(description="Password reset email sent if email exists."),
+        400: openapi.Response(description="Invalid captcha or email format."),
+    },
+)
+@api_view(["POST"])
 @ratelimit(key=RATE_LIMIT_KEY, rate=RATE_LIMIT_RATE, block=RATE_LIMIT_BLOCK)
-@api_view(['POST'])
 def password_reset_with_captcha(request):
-    captcha_response = request.data.get('g-recaptcha-response')
-    if not verify_captcha(captcha_response):
-        return JsonResponse({"detail": "Invalid captcha."}, status=400)
+    """
+    Temporarily bypass CAPTCHA validation.
+
+    This function handles password reset requests but skips real CAPTCHA validation
+    while the frontend is not implemented. When the frontend is ready, the CAPTCHA
+    validation should be enabled by ensuring `verify_captcha` is called and not skipped
+    in DEBUG mode.
+
+    Steps to update when frontend is connected:
+        1. Remove the `if settings.DEBUG` condition.
+        2. Always validate the CAPTCHA using `verify_captcha(captcha_response)`.
+
+    A JSON response with the password reset status:
+            - {"detail": "Invalid captcha."} (status 400): If the CAPTCHA is invalid.
+            - {"detail": "If the email exists, a reset link was sent."} (status 200):
+              If the email is valid and a reset link is sent.
+            - {"errors": {}} (status 400): If the email is invalid.
+    """
+    captcha_response = request.data.get("g-recaptcha-response")
+    if settings.DEBUG:
+        is_captcha_valid = True
+    else:
+        is_captcha_valid = verify_captcha(captcha_response)
+
+    if not is_captcha_valid:
+        return JsonResponse(
+            {
+                "errors": [
+                    {"field": "g-recaptcha-response", "message": "Invalid CAPTCHA."}
+                ]
+            },
+            status=400,
+        )
 
     serializer = PasswordResetSerializer(data=request.data)
     if serializer.is_valid():
-        return JsonResponse({"detail": "If the email exists, a reset link was sent."}, status=200)
-    return JsonResponse({"errors": serializer.errors}, status=400)
+        return JsonResponse(
+            {"detail": "If the email exists, a reset link was sent."}, status=200
+        )
+
+    return JsonResponse(
+        {
+            "errors": [
+                {"field": key, "message": value[0]}
+                for key, value in serializer.errors.items()
+            ]
+        },
+        status=400,
+    )
+
+
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
@@ -64,7 +134,6 @@ class LogoutView(APIView):
             400: "Invalid or missing refresh token",
         }
     )
-
     def post(self, request):
         serializer = LogoutSerializer(data=request.data, context={'request': request})
         
@@ -90,6 +159,7 @@ class RegisterUserView(APIView):
     """
     View for user registration.
     """
+
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -105,7 +175,8 @@ class RegisterUserView(APIView):
 
                 # Return a response with limited user data
                 logger.info(
-                        f"User successfully registered. User ID: {user.user_id}, Email: {user.email}")
+                    f"User successfully registered. User ID: {user.user_id}, Email: {user.email}"
+                )
 
                 response_data = {
                     "user_id": user.user_id,
@@ -117,7 +188,6 @@ class RegisterUserView(APIView):
                 }
                 return Response(response_data, status=status.HTTP_201_CREATED)
 
-
             except APIException as e:
                 logger.error(f"API error during signup: {e}")
                 raise
@@ -128,5 +198,22 @@ class RegisterUserView(APIView):
         # Return validation errors
         logger.warning(
             f"User registration validation failed. Errors: {serializer.errors}"
-            )
+        )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CustomUserViewSet(UserViewSet):
+    """Custom endpoint to modify default Djoser's /me endpoint"""
+    permission_classes = [IsAuthenticated]
+    serializer_class = CustomUserSerializer
+
+    def get_object(self):
+        return self.request.user
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+
+        token_role_value = self.request.auth.get('role')
+        token_role_name = Role(token_role_value).name
+        return Response({**serializer.data, 'role_value': token_role_value, 'role_name': token_role_name})
