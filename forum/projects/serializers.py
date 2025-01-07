@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.db import transaction
-from .models import Project, Description
+from .models import Project, Description, Investment
 
 
 class DescriptionSerializer(serializers.ModelSerializer):
@@ -56,4 +56,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         return instance
 
 
-
+class InvestmentCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Investment
+        fields = ['id', 'share', 'project', 'investor', 'created_at']
