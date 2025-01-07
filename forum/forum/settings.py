@@ -60,6 +60,11 @@ INSTALLED_APPS = [
     "dashboard",
     "notifications",
     "channels",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.github",
+    "allauth.socialaccount.providers.google",
 ]
 
 MIDDLEWARE = [
@@ -71,6 +76,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "forum.urls"
@@ -272,7 +278,6 @@ SIMPLE_JWT = {
 }
 
 
-AUTH_USER_MODEL = "users.CustomUser"
 RECAPTCHA_PUBLIC_KEY = env("RECAPTCHA_PUBLIC_KEY")
 RECAPTCHA_PRIVATE_KEY = env("RECAPTCHA_PRIVATE_KEY")
 
@@ -302,37 +307,6 @@ SWAGGER_SETTINGS = {
     },
     "USE_SESSION_AUTH": False,
 }
-
-RECAPTCHA_PUBLIC_KEY = env("RECAPTCHA_PUBLIC_KEY")
-RECAPTCHA_PRIVATE_KEY = env("RECAPTCHA_PRIVATE_KEY")
-
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = env("EMAIL_HOST")
-EMAIL_PORT = env.int("EMAIL_PORT")
-EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS")
-EMAIL_HOST_USER = env("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
-
-RATE_LIMIT_KEY = "ip"
-RATE_LIMIT_RATE = "5/m"
-RATE_LIMIT_BLOCK = True
-DOMAIN_NAME = os.getenv("DOMAIN_NAME", "localhost")
-
-
-# Swagger settings to enable JWT authorization
-SWAGGER_SETTINGS = {
-    "SECURITY_DEFINITIONS": {
-        "Bearer": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header",
-            "description": 'Enter: "Bearer <JWT token>"',
-        }
-    },
-    "USE_SESSION_AUTH": False,
-}
-
 
 
 # Daphne
@@ -355,3 +329,23 @@ CACHES = {
 
 RATELIMIT_USE_CACHE = "default"  # Make sure RATELIMIT is reconfigured to use Redis when we add this type of caching
 
+
+# Django-allauth settings
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'EMAIL_AUTHENTICATION': True,
+        'APP': {
+            'client_id': os.getenv("GOOGLE_OAUTH_CLIENT_ID"),
+            'secret': os.getenv("GOOGLE_OAUTH_CLIENT_SECRET")
+        }
+    },
+    'github': {
+        'EMAIL_AUTHENTICATION': True,
+        'APP': {
+            'client_id': os.getenv("GITHUB_OAUTH_CLIENT_ID"),
+            'secret': os.getenv("GITHUB_OAUTH_CLIENT_SECRET")
+        }
+    }
+}
+
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
