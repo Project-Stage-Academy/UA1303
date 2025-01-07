@@ -5,7 +5,7 @@ from django.db import migrations
 investor_profiles_data = [
     {
         "user_email": "levysarah@payne.com",
-        "country": "USA",
+        "country": "US",
         "city": "St. Louis",
         "zip_code": "63101",
         "address": "1428 Market St",
@@ -15,7 +15,7 @@ investor_profiles_data = [
     },
     {
         "user_email": "oleksii@shumylo.com",
-        "country": "Ukraine",
+        "country": "UA",
         "city": "Lviv",
         "zip_code": "79018",
         "address": "57 Fedkovycha Street",
@@ -25,7 +25,7 @@ investor_profiles_data = [
     },
     {
         "user_email": "browndavid@hotmail.com",
-        "country": "UK",
+        "country": "GB",
         "city": "London",
         "zip_code": "W1U 8EW",
         "address": "25 Baker Street",
@@ -35,7 +35,7 @@ investor_profiles_data = [
     },
     {
         "user_email": "bohdan@forkutsa.com",
-        "country": "Ukraine",
+        "country": "UA",
         "city": "Lviv",
         "zip_code": "79018",
         "address": "57 Fedkovycha Street",
@@ -45,7 +45,7 @@ investor_profiles_data = [
     },
     {
         "user_email": "danyl@koltak.com",
-        "country": "Ukraine",
+        "country": "UA",
         "city": "Dnipro",
         "zip_code": "49000",
         "address": "22 Dmytro Yavornytsky Avenue",
@@ -55,7 +55,7 @@ investor_profiles_data = [
     },
     {
         "user_email": "maksym@derkach.com",
-        "country": "Ukraine",
+        "country": "UA",
         "city": "Kyiv",
         "zip_code": "02230",
         "address": "3A Mykhaila Hryshka Street",
@@ -65,7 +65,7 @@ investor_profiles_data = [
     },
     {
         "user_email": "serhii@kryvosheiev.com",
-        "country": "Ukraine",
+        "country": "UA",
         "city": "Kyiv",
         "zip_code": "02230",
         "address": "3A Mykhaila Hryshka Street",
@@ -75,7 +75,7 @@ investor_profiles_data = [
     },
     {
         "user_email": "iryna@mladanovych.com",
-        "country": "Ukraine",
+        "country": "UA",
         "city": "Dnipro",
         "zip_code": "49000",
         "address": "22 Dmytro Yavornytsky Avenue",
@@ -85,7 +85,7 @@ investor_profiles_data = [
     },
     {
         "user_email": "vasyl@yavorskyi.com",
-        "country": "Ukraine",
+        "country": "UA",
         "city": "Lviv",
         "zip_code": "79018",
         "address": "57 Fedkovycha Street",
@@ -95,7 +95,7 @@ investor_profiles_data = [
     },
     {
         "user_email": "dmytro@kyrychuk.com",
-        "country": "Ukraine",
+        "country": "UA",
         "city": "Kharkiv",
         "zip_code": "61057",
         "address": "10 Sumska Street",
