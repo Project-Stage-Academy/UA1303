@@ -12,12 +12,12 @@ class BaseRolePermission(BasePermission):
     required_role: Role
 
     def has_permission(self, request: Request, view) -> bool:
-        '''
+        """
         This method checks if user role, provided with JWT,
         is the specified one, using both token check and user model check.
         Before, it also checks if user is authenticated, and specifically,
         if authenticated using JWT.
-        '''
+        """
         if not request.user.is_authenticated:
             return False
 

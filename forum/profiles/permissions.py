@@ -1,4 +1,8 @@
-from rest_framework.permissions import BasePermission, SAFE_METHODS
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import BasePermission
+from rest_framework.permissions import SAFE_METHODS
+
+from users.utils import get_user_role_from_token
 
 
 class IsOwnerOrReadOnly(BasePermission):
@@ -22,3 +26,26 @@ class IsOwnerOrReadOnly(BasePermission):
         # Write permissions are only allowed to the owner of the object
         return obj.user == request.user
 
+
+class IsInvestor(BasePermission):
+    """
+    Custom permission to allow access only to users with 'investor' role
+    """
+
+    def has_permission(self, request, view):
+        user_role = get_user_role_from_token(request)
+        if not user_role or user_role != 'investor':
+            raise PermissionDenied("Access denied. User must be an investor.")
+        return True
+
+
+class IsProfileUser(BasePermission):
+    """
+    Custom permission to allow access only to users with 'profile_user' role
+    """
+
+    def has_permission(self, request, view):
+        user_role = get_user_role_from_token(request)
+        if not user_role or user_role != 'profile_user':
+            raise PermissionDenied("Access denied. User must be a profile user.")
+        return True

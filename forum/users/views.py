@@ -69,28 +69,28 @@ class LogoutView(APIView):
     )
     def post(self, request):
         serializer = LogoutSerializer(data=request.data, context={'request': request})
-        
+
         if not serializer.is_valid():
             logger.error(f"Validation error: {serializer.errors},  Request Data: {request.data}")
             return Response({"error": "Access denied."}, status=400)
-        
+
         refresh_token = serializer.validated_data['refresh']
 
         try:
             token = RefreshToken(refresh_token)
             token.blacklist()
-            
+
             logger.info("User logged out successfully.")
 
             return Response({"detail": "Logged out successfully."}, status=200)
         except Exception as e:
-            logger.error(f"Unexpected error occurred: {e}")       
+            logger.error(f"Unexpected error occurred: {e}")
             return Response({"error": "Access denied."}, status=403)
 
-   
+
 class RegisterUserView(APIView):
     """
-    View for user registration.
+    View for user registration
     """
     permission_classes = [AllowAny]
 
@@ -148,3 +148,40 @@ class CustomUserViewSet(UserViewSet):
         token_role_value = self.request.auth.get('role')
         token_role_name = Role(token_role_value).name
         return Response({**serializer.data, 'role_value': token_role_value, 'role_name': token_role_name})
+
+
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Role, CustomUser
+
+
+class RoleBasedTokenView(TokenObtainPairView):
+    """
+    View for obtaining JWT tokens with role-based functionality
+    """
+
+    def post(self, request, *args, **kwargs):
+        role = request.data.get("role")
+        if role is None:
+            return Response({"detail": "Role is required for login."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            role = int(role)
+        except ValueError:
+            return Response({"detail": "Invalid role value."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = CustomUser.objects.filter(email=request.data.get("email")).first()
+        if not user:
+            return Response({"detail": "User does not exist."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Validate user role
+        if not Role.has_role(user.role, Role(role)):
+            return Response({"detail": "User does not have the required role."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Generate token
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            response.data['role'] = role
+
+        return response
