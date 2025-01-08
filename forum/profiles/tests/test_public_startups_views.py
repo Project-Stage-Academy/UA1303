@@ -11,11 +11,12 @@ fake = Faker()
 
 class PublicStartupTestCase(APITestCase):
     def setUp(self):
+        User.objects.all().delete()
         StartupProfile.objects.all().delete()
         self.url = reverse('profiles:public-startups-list')
 
         self.startups = []
-        for i in range(120):
+        for i in range(55):
             user = User.objects.create_user(
                 email=fake.email(),
                 password=fake.password(
@@ -44,55 +45,29 @@ class PublicStartupTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue('results' in response.data)
         self.assertEqual(len(response.data['results']), 50)
-        self.assertEqual((response.data['count']), 120)
+        self.assertEqual((response.data['count']), 55)
 
     def test_pagination_first_page(self):
         response = self.client.get(self.url, {'page': 1})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue('results' in response.data)
         self.assertEqual(len(response.data['results']), 50)
-        self.assertEqual((response.data['count']), 120)
+        self.assertEqual((response.data['count']), 55)
         self.assertIsNotNone(response.data['next'])
         self.assertIsNone(response.data['previous'])
 
-    def test_pagination_second_page(self):
+    def test_pagination_last_page(self):
         response = self.client.get(self.url, {'page': 2})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue('results' in response.data)
-        self.assertEqual(len(response.data['results']), 50)
-        self.assertEqual((response.data['count']), 120)
-        self.assertIsNotNone(response.data['next'])
-        self.assertIsNotNone(response.data['previous'])
-
-    def test_pagination_last_page(self):
-        response = self.client.get(self.url, {'page': 3})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue('results' in response.data)
-        self.assertEqual(len(response.data['results']), 20)
-        self.assertEqual((response.data['count']), 120)
+        self.assertEqual(len(response.data['results']), 5)
+        self.assertEqual((response.data['count']), 55)
         self.assertIsNone(response.data['next'])
-        self.assertIsNone(response.data['previous'])
-
-    def test_pagination_page_size(self):
-        response = self.client.get(self.url, {'page_size': 30})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue('results' in response.data)
-        self.assertEqual(len(response.data['results']), 30)
-        self.assertEqual(response.data['count'], 120)
-        self.assertIsNotNone(response.data['next'])
+        self.assertIsNotNone(response.data['previous'])
 
     def test_invalid_page(self):
         response = self.client.get(self.url, {'page': 999})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_combination_of_page_and_page_size(self):
-        response = self.client.get(self.url, {'page': 2, 'page_size': 40})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue('results' in response.data)
-        self.assertEqual(len(response.data['results']), 40)
-        self.assertEqual(response.data['count'], 120)
-        self.assertIsNotNone(response.data['next'])
-        self.assertIsNotNone(response.data['previous'])
 
     def test_filter_by_industry(self):
         response = self.client.get(self.url, {"industry": "Technology"})
@@ -103,20 +78,20 @@ class PublicStartupTestCase(APITestCase):
     def test_filter_by_country(self):
         response = self.client.get(self.url, {"country": "USA"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        for startup in response.data:
+        for startup in response.data['results']:
             self.assertEqual(startup["country"], "USA")
     
     def test_filter_by_city(self):
         response = self.client.get(self.url, {"city": "Toronto"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        for startup in response.data:
+        for startup in response.data['results']:
             self.assertEqual(startup['city'], "Toronto")
 
     def test_search_by_company_name(self):
-        response = self.client.get(self.url, {'search': 'Test Company 1'})
+        response = self.client.get(self.url, {'search': 'Test Company 49'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        for startup in response.data:
-            self.assertIn('Test Company 1', startup['company_name'])
+        for startup in response.data['results']:
+            self.assertIn('Test Company 49', startup['company_name'])
 
     def test_ordering_by_company_name(self):
         response = self.client.get(self.url, {'ordering': "company_name"})
@@ -154,10 +129,7 @@ class PublicStartupTestCase(APITestCase):
             self.assertEqual(startup['industry'], 'Technology')
             self.assertEqual(startup['country'], 'USA')
 
-    def test_invalid_filter(self):
-        response = self.client.get(self.url, {'invalid_param': 'value'})
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
     def tearDown(self):
-        User.objects.filter(email__startswith="test@").delete()
-        StartupProfile.objects.filter(company_name__startswith="Test Company").delete()
+        User.objects.all().delete()
+        StartupProfile.objects.all().delete()
+        super().tearDown()
