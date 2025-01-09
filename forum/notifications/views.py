@@ -100,12 +100,11 @@ class NotificationListView(generics.ListAPIView):
     """
     permission_classes = [IsAuthenticated, HasStartupProfilePermission]
     pagination_class = StandardResultsSetPagination
+    serializer_class = StartUpNotificationReadSerializer
 
     def get_queryset(self):
         startup_id = self.request.user.startup_profile.id
         return StartUpNotification.objects.filter(startup_id=startup_id).order_by('id').select_related('notification_type', 'investor', 'startup')
-
-    serializer_class = StartUpNotificationReadSerializer
 
     def get_serializer_context(self):
         return {'request': self.request}
@@ -124,3 +123,6 @@ class NotificationDetailView(generics.RetrieveAPIView):
         notification = super().get_object()
         notification.mark_as_read()
         return notification
+    
+    def get_serializer_context(self):
+        return {'request': self.request}
