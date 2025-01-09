@@ -4,14 +4,15 @@ from drf_yasg import openapi
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
+from rest_framework import status, generics, permissions
 
-from .models import NotificationMethod, NotificationPreference, NotificationCategory
+from .models import NotificationMethod, NotificationPreference, NotificationCategory, NotificationForUpdates
 from .serializers import (
     NotificationMethodSerializer,
     NotificationCategorySerializer,
     NotificationPreferenceSerializer,
     NotificationPreferenceUpdateSerializer,
+    NotificationForUpdatesSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -191,3 +192,11 @@ class NotificationPreferenceView(APIView):
             {"detail": "Notification preferences not set."},
             status=status.HTTP_404_NOT_FOUND,
         )
+
+
+class InvestorNotificationListView(generics.ListAPIView):
+    serializer_class = NotificationForUpdatesSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return NotificationForUpdates.objects.filter(user=self.request.user).order_by('-created_at')

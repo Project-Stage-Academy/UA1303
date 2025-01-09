@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import NotificationMethod, NotificationCategory, NotificationPreference
+from .models import NotificationMethod, NotificationCategory, NotificationPreference, NotificationForUpdates
 
 
 class NotificationMethodSerializer(serializers.ModelSerializer):
@@ -56,3 +56,18 @@ class NotificationPreferenceUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = NotificationPreference
         fields = ["allowed_notification_methods", "allowed_notification_categories"]
+
+
+class NotificationForUpdatesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NotificationForUpdates
+        fields = ['id', 'message', 'notification_type', 'startup_profile', 'project', 'created_at', 'is_read']
+
+    def validate_notification_type(self, value):
+        # Get the valid choices from the model
+        valid_choices = [choice[0] for choice in NotificationForUpdates.NOTIFICATION_TYPES]
+        
+        # Check if the provided value is in the valid choices
+        if value not in valid_choices:
+            raise serializers.ValidationError(f"Invalid notification_type. Valid choices are: {valid_choices}")
+        return value
