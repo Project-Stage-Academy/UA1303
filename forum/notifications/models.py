@@ -39,7 +39,8 @@ class StartUpNotification(models.Model):
     investor = models.ForeignKey(InvestorProfile, on_delete=models.CASCADE, related_name='notifications')
     startup = models.ForeignKey(StartupProfile, on_delete=models.CASCADE, related_name='notifications', db_index=True)
     is_read = models.BooleanField(default=False, db_index=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Startup Notification"
@@ -51,3 +52,8 @@ class StartUpNotification(models.Model):
                 name='unique_notification'
             )
         ]
+
+    def mark_as_read(self):
+        if not self.is_read:
+            self.is_read = True
+            self.save()

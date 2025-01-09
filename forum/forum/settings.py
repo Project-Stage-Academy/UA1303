@@ -57,7 +57,7 @@ INSTALLED_APPS = [
     "projects",
     "communications",
     "dashboard",
-    "notifications",
+    "notifications.apps.NotificationsConfig",
 ]
 
 MIDDLEWARE = [
@@ -250,7 +250,6 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
-        
     },
 }
 

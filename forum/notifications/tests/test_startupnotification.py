@@ -44,7 +44,7 @@ class StartUpNotificationSerializerTests(APITestCase):
         }
         serializer = StartUpNotificationCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
-        self.assertEqual(serializer.errors['non_field_errors'][0].code, 'unique')
+        self.assertEqual(serializer.errors["non_field_errors"][0].code, "unique")
 
     def test_startup_notification_create_serializer_invalid_data(self):
         data = {
@@ -55,6 +55,9 @@ class StartUpNotificationSerializerTests(APITestCase):
         serializer = StartUpNotificationCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertEqual(len(serializer.errors), 3)
+        self.assertEqual(serializer.errors["notification_type"][0].code, "incorrect_type")
+        self.assertEqual(serializer.errors["investor"][0].code, "null")
+        self.assertEqual(serializer.errors["startup"][0].code, "null")           
 
     def test_startup_notification_create_serializer_create(self):
         data = {
@@ -73,7 +76,6 @@ class StartUpNotificationSerializerTests(APITestCase):
         else:
             self.fail("Serializer is not valid")
 
-
     def test_startup_notification_create_serializer_invalid_notification_type(self):
         data = {
             "notification_type": 999,  # Invalid notification_type
@@ -82,6 +84,7 @@ class StartUpNotificationSerializerTests(APITestCase):
         }
         serializer = StartUpNotificationCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
+        self.assertEqual(serializer.errors["notification_type"][0].code, "does_not_exist")
 
     def test_startup_notification_create_serializer_missing_required_fields(self):
         data = {
@@ -91,6 +94,8 @@ class StartUpNotificationSerializerTests(APITestCase):
         serializer = StartUpNotificationCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertEqual(len(serializer.errors), 2)
+        self.assertEqual(serializer.errors["investor"][0].code, "required")
+        self.assertEqual(serializer.errors["startup"][0].code, "required")
 
     def test_startup_notification_create_serializer_empty_values(self):
         data = {
@@ -101,6 +106,9 @@ class StartUpNotificationSerializerTests(APITestCase):
         serializer = StartUpNotificationCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertEqual(len(serializer.errors), 3)
+        self.assertEqual(serializer.errors["notification_type"][0].code, "null")
+        self.assertEqual(serializer.errors["investor"][0].code, "null")
+        self.assertEqual(serializer.errors["startup"][0].code, "null") 
 
     def test_startup_notification_create_serializer_null_values(self):
         data = {
@@ -111,6 +119,9 @@ class StartUpNotificationSerializerTests(APITestCase):
         serializer = StartUpNotificationCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertEqual(len(serializer.errors), 3)
+        self.assertEqual(serializer.errors["notification_type"][0].code, "null")
+        self.assertEqual(serializer.errors["investor"][0].code, "null")
+        self.assertEqual(serializer.errors["startup"][0].code, "null") 
 
 
 class NotificationAPITests(APITestCase):

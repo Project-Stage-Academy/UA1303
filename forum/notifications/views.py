@@ -10,6 +10,8 @@ from rest_framework import exceptions
 from .models import StartUpNotification
 from .serializers import StartUpNotificationReadSerializer
 from .paginations import StandardResultsSetPagination
+from .permissions import HasStartupProfilePermission, HasStartupAccessPermission
+from rest_framework import generics
 
 from .models import NotificationType, NotificationPreference
 from .serializers import (
@@ -96,15 +98,12 @@ class NotificationListView(generics.ListAPIView):
     """
     To get all notifications as a list of dicts
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasStartupProfilePermission]
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
-        if not hasattr(self.request.user, 'startup_profile'):
-            raise exceptions.NotFound("User does not have a startup profile.")
-
         startup_id = self.request.user.startup_profile.id
-        return StartUpNotification.objects.filter(startup_id=startup_id).order_by('id')
+        return StartUpNotification.objects.filter(startup_id=startup_id).order_by('id').select_related('notification_type', 'investor', 'startup')
 
     serializer_class = StartUpNotificationReadSerializer
 
@@ -112,22 +111,16 @@ class NotificationListView(generics.ListAPIView):
         return {'request': self.request}
     
 
-class NotificationDetailView(APIView):
+class NotificationDetailView(generics.RetrieveAPIView):
     """
     To get a single notification and set 'is_read' to True
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasStartupProfilePermission, HasStartupAccessPermission]
+    queryset = StartUpNotification.objects.all()
+    serializer_class = StartUpNotificationReadSerializer
+    lookup_field = 'id'
 
-    def get(self, request, id):
-        try:
-            notification = StartUpNotification.objects.get(id=id)
-
-            if request.user.startup_profile.id != notification.startup_id:
-                return Response({"error": "Access denied"}, status=status.HTTP_403_FORBIDDEN)
-
-            notification.is_read = True
-            notification.save()
-            serializer = StartUpNotificationReadSerializer(notification, context={'request': request})
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except StartUpNotification.DoesNotExist:
-            return Response({"detail": "Notification not found."}, status=status.HTTP_404_NOT_FOUND)
+    def get_object(self):
+        notification = super().get_object()
+        notification.mark_as_read()
+        return notification
