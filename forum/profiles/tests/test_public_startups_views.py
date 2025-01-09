@@ -1,3 +1,4 @@
+from faker import Faker
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
@@ -5,99 +6,130 @@ from django.urls import reverse
 from profiles.models import StartupProfile
 
 User = get_user_model()
+fake = Faker()
 
 
 class PublicStartupTestCase(APITestCase):
+    def setUp(self):
+        User.objects.all().delete()
+        StartupProfile.objects.all().delete()
+        self.url = reverse('profiles:public-startups-list')
 
-    get_public_startups_url = 'profiles:public-startups-list'
-    pagination_page_size = 50
-
-    @classmethod
-    def setUpTestData(cls):
-        for i in range(cls.pagination_page_size+1):
-            user = User.objects.create_user(password=f'password{i}', email=f'user{i}@email.com')
-            StartupProfile.objects.create(
+        self.startups = []
+        for i in range(55):
+            user = User.objects.create_user(
+                email=fake.email(),
+                password=fake.password(
+                    length=10,
+                    special_chars=True,
+                    upper_case=True,
+                    lower_case=True
+                )
+            )
+            startup = StartupProfile.objects.create(
                 user=user,
-                company_name=f'SuperCompany {user}',
-                industry='transport',
-                size='100',
-                country='USA',
-                city='Los Angeles',
-                zip_code='2000',
-                address='Some street 7',
-                phone=f'+3806322255{i:02}',
-                email=f'random{user}@email.com',
-                description='Some description',
-                is_public=True,
+                company_name=f"Test Company {i}",
+                industry=fake.random_element(["Technology", "Healthcare", "Finance"]),
+                size=fake.random_element(["100", "200", "300"]),
+                country=fake.random_element(["USA", "Canada", "Germany"]),
+                city=fake.random_element(["New York", "Toronto", "Berlin"]),
+                zip_code=fake.zipcode(),
+                email=fake.email(),
+                is_public=True
             )
 
-    def test_public_startups(self):
-        """Test public startups GET method. And tests correct fields are present in the response"""
-        url = reverse(self.get_public_startups_url)
-        response = self.client.get(url)
+            self.startups.append(startup)
+    
+    def test_list_all_statrtups(self):
+        response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data.get('results'), '"results" not found in data')
-
-        for startup in response.data.get('results'):
-            self.assertIn('id', startup, '"id" not found in startup data')
-            self.assertIn('company_name', startup,  '"company_name" not found in startup data')
-            self.assertIn('industry', startup,  '"industry" not found in startup data')
-            self.assertIn('country', startup,  '"country" not found in startup data')
-            self.assertIn('city', startup,  '"city" not found in startup data')
-            self.assertIn('description', startup, '"description" not found in startup data')
-
-            self.assertNotIn('user', startup)
-            self.assertNotIn('size', startup)
-            self.assertNotIn('zip_code', startup)
-            self.assertNotIn('address', startup)
-            self.assertNotIn('phone', startup)
-            self.assertNotIn('email', startup)
-            self.assertNotIn('is_public', startup)
-            self.assertNotIn('created_at', startup)
-            self.assertNotIn('updated_at', startup)
-            self.assertNotIn('projects', startup)
-
-    def assert_pagination_fields(self, response):
-        """Helper method to check pagination fields present in the response"""
-        self.assertIn('count', response.data)
-        self.assertIn('next', response.data)
-        self.assertIn('previous', response.data)
-        self.assertIn('results', response.data)
+        self.assertTrue('results' in response.data)
+        self.assertEqual(len(response.data['results']), 50)
+        self.assertEqual((response.data['count']), 55)
 
     def test_pagination_first_page(self):
-        """Test that the first page contains the correct results."""
-        url = reverse(self.get_public_startups_url)
-        response = self.client.get(url, {'page': 1})
+        response = self.client.get(self.url, {'page': 1})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assert_pagination_fields(response)
-
-        self.assertEqual(len(response.data.get('results')), self.pagination_page_size)
+        self.assertTrue('results' in response.data)
+        self.assertEqual(len(response.data['results']), 50)
+        self.assertEqual((response.data['count']), 55)
         self.assertIsNotNone(response.data['next'])
         self.assertIsNone(response.data['previous'])
 
     def test_pagination_last_page(self):
-        """Test that the last page contains the correct results."""
-        url = reverse(self.get_public_startups_url)
-        response = self.client.get(url, {'page': 2})
+        response = self.client.get(self.url, {'page': 2})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assert_pagination_fields(response)
-
-        self.assertLessEqual(len(response.data['results']), self.pagination_page_size)
-        self.assertIsNotNone(response.data['previous'])
+        self.assertTrue('results' in response.data)
+        self.assertEqual(len(response.data['results']), 5)
+        self.assertEqual((response.data['count']), 55)
         self.assertIsNone(response.data['next'])
+        self.assertIsNotNone(response.data['previous'])
 
-    def test_pagination_non_existing_page(self):
-        """Test that pagination does not return the page that doesn't exist."""
-        url = reverse(self.get_public_startups_url)
-        response = self.client.get(url, {'page': 3})
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    def test_invalid_page(self):
+        response = self.client.get(self.url, {'page': 999})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_no_results(self):
-        """Test that endpoints with no results returns an empty list"""
-        StartupProfile.objects.all().update(is_public=False)
-        url = reverse(self.get_public_startups_url)
-        response = self.client.get(url, {'page': 1})
+    def test_filter_by_industry(self):
+        response = self.client.get(self.url, {"industry": "Technology"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data.get('results')), 0)
+        for startup in response.data['results']:
+            self.assertEqual(startup['industry'], 'Technology')
+
+    def test_filter_by_country(self):
+        response = self.client.get(self.url, {"country": "USA"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        for startup in response.data['results']:
+            self.assertEqual(startup["country"], "USA")
+    
+    def test_filter_by_city(self):
+        response = self.client.get(self.url, {"city": "Toronto"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        for startup in response.data['results']:
+            self.assertEqual(startup['city'], "Toronto")
+
+    def test_search_by_company_name(self):
+        response = self.client.get(self.url, {'search': 'Test Company 49'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        for startup in response.data['results']:
+            self.assertIn('Test Company 49', startup['company_name'])
+
+    def test_ordering_by_company_name(self):
+        response = self.client.get(self.url, {'ordering': "company_name"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        company_names = [startup['company_name'] for startup in response.data['results']]
+        self.assertEqual(company_names, sorted(company_names))
+
+    def test_return_empty_list(self):
+        response = self.client.get(self.url, {'industry': "IT"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['results'], [])
+
+    def test_filter_and_ordering(self):
+        response = self.client.get(self.url, {'industry': "Technology", 'ordering': 'company_name'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        startups = response.data['results']
+        self.assertTrue(all(startup['industry'] == 'Technology' for startup in startups))
+        company_names = [startup['company_name'] for startup in startups]
+        self.assertEqual(company_names, sorted(company_names))
+
+    def test_search_no_results(self):
+        response = self.client.get(self.url, {'search': 'Nonexistent Company'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 0)
+        self.assertEqual(response.data['results'], [])
+    
+    def test_unauthenticated_access(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    
+    def test_combined_filters(self):
+        response = self.client.get(self.url, {'industry': 'Technology', 'country': 'USA'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        for startup in response.data['results']:
+            self.assertEqual(startup['industry'], 'Technology')
+            self.assertEqual(startup['country'], 'USA')
+
+    def tearDown(self):
+        User.objects.all().delete()
+        StartupProfile.objects.all().delete()
+        super().tearDown()

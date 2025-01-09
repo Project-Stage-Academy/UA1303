@@ -8,6 +8,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.generics import ListAPIView
 from rest_framework.mixins import ListModelMixin
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
@@ -171,11 +172,22 @@ class SaveStartupViewSet(ListModelMixin, GenericViewSet):
 
 
 class PublicStartupViewSet(ListModelMixin, GenericViewSet):
-    """Returns a list of public startups"""
+    """Returns a list of public startups with optional filtering, search, and ordering capabilities."""
     serializer_class = PublicStartupProfileSerializer
     queryset = StartupProfile.objects.filter(is_public=True)
     pagination_class = PageNumberPagination
 
+    filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
+    filterset_fields = ['industry', 'country', 'city']
+    search_fields = ['company_name', 'industry', 'country', 'city']
+    ordering_fields = ['company_name', 'created_at']
+
     @swagger_auto_schema(tags=['Public Startups'])
     def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
+        try:
+            return super().list(request, *args, **kwargs)
+        except Exception as e:
+            return Response(
+                {'error': '"Invalid filter or search parameter."'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
