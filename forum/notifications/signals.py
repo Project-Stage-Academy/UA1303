@@ -18,9 +18,5 @@ def create_startup_notification(sender, instance, action, reverse, model, pk_set
             serializer = StartUpNotificationCreateSerializer(data=data)
             if serializer.is_valid():
                 serializer.save()
-
-                serializer = StartUpNotificationCreateSerializer(data=data)
-                if serializer.is_valid():
-                    serializer.save()
             else:
                 print(serializer.errors)
