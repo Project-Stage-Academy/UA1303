@@ -1,12 +1,9 @@
 import factory
-import logging
 from factory.django import DjangoModelFactory
 from .models import NotificationType, StartUpNotification
 from profiles.models import InvestorProfile, StartupProfile
 from users.models import CustomUser, Role
 
-factory.Faker._DEFAULT_LOCALE = 'en_US'
-logging.getLogger('faker').setLevel(logging.INFO)
 
 class UserFactory(DjangoModelFactory):
     class Meta:
@@ -17,7 +14,7 @@ class UserFactory(DjangoModelFactory):
     email = factory.Faker('email')
     role = Role.BOTH
     user_phone = factory.Faker('phone_number')
-    title = 'some_title'
+    title = "some_title"
     is_staff = False
     is_active = True
     is_superuser = False
@@ -28,7 +25,7 @@ class InvestorProfileFactory(DjangoModelFactory):
         model = InvestorProfile
 
     user = factory.SubFactory(UserFactory)
-    country = factory.Faker('country')
+    country = factory.Faker('country_code', representation='alpha-2')
     city = factory.Faker('city')
     zip_code = factory.Faker('postcode')
     address = factory.Faker('street_address')
@@ -43,7 +40,7 @@ class StartupProfileFactory(DjangoModelFactory):
     company_name = factory.Faker('company')
     industry = factory.Faker('word')
     size = factory.Faker('random_element', elements=('Small', 'Medium', 'Large'))
-    country = factory.Faker('country')
+    country = factory.Faker('country_code', representation='alpha-2')
     city = factory.Faker('city')
     zip_code = factory.Faker('postcode')
     address = factory.Faker('street_address')

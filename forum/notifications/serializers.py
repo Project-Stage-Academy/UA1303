@@ -89,5 +89,13 @@ class StartUpNotificationCreateSerializer(serializers.ModelSerializer):
         fields = ['notification_type', 'investor', 'startup', 'is_read']
 
     def create(self, validated_data):
-        StartUpNotification.objects.bulk_create([StartUpNotification(**validated_data)], ignore_conflicts=True)
-        return Response(status=status.HTTP_201_CREATED)
+        return StartUpNotification.objects.create(**validated_data)
+    
+    def validate(self, data):
+        if StartUpNotification.objects.filter(
+            notification_type=data['notification_type'],
+            investor=data['investor'],
+            startup=data['startup']
+        ).exists():
+            raise serializers.ValidationError("This notification already exists.")
+        return data
