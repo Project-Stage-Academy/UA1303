@@ -58,7 +58,7 @@ INSTALLED_APPS = [
     "projects",
     "communications",
     "dashboard",
-    "notifications",
+    "notifications.apps.NotificationsConfig",
     "channels",
     "allauth",
     "allauth.account",
@@ -248,11 +248,20 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
-
         "": {
             "handlers": ["console", "forum_file"],
-            "level": "DEBUG",
-            "propagate": True,
+            "level": "INFO",
+            "propagate": False,
+        },
+        "faker": {
+            "handlers": ["console", "forum_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "factory": {
+            "handlers": ["console", "forum_file"],
+            "level": "INFO",
+            "propagate": False,
         },
     },
 }
