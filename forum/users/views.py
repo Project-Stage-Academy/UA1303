@@ -1,34 +1,21 @@
-import os
-import requests
-from django.conf import settings
-from django_ratelimit.decorators import ratelimit
-from django.http import JsonResponse
-
-from rest_framework.decorators import api_view
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.exceptions import APIException
-from rest_framework import status
-from djoser.views import UserViewSet
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
-from .utils import verify_captcha
-from .serializers import (
-    PasswordResetSerializer,
-    LogoutSerializer,
-    CustomUserSerializer
-)
-from .models import Role
-
-from django_ratelimit.decorators import ratelimit
-from django.http import JsonResponse
-
 import logging
+import os
+
+from django.conf import settings
+from django.http import JsonResponse
+from django_ratelimit.decorators import ratelimit
+from djoser.views import UserViewSet
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 from forum import settings
+from rest_framework.decorators import api_view
+from rest_framework.exceptions import APIException
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from .serializers import PasswordResetSerializer, LogoutSerializer, CustomUserSerializer
-from .models import Role
+from .utils import verify_captcha
 
 RATE_LIMIT_KEY = os.getenv("RATE_LIMIT_KEY", "ip")
 RATE_LIMIT_RATE = os.getenv("RATE_LIMIT_RATE", "5/m")
@@ -113,7 +100,6 @@ def password_reset_with_captcha(request):
         },
         status=400,
     )
-
 
 
 class LogoutView(APIView):
@@ -220,7 +206,6 @@ class CustomUserViewSet(UserViewSet):
         token_role_value = self.request.auth.get('role')
         token_role_name = Role(token_role_value).name
         return Response({**serializer.data, 'role_value': token_role_value, 'role_name': token_role_name})
-
 
 
 from rest_framework_simplejwt.views import TokenObtainPairView

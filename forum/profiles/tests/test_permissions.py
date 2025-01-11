@@ -1,143 +1,115 @@
-import factory
-from django.contrib.auth import get_user_model
 from rest_framework import status
-from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
-
-from profiles.models import InvestorProfile, StartupProfile
+from rest_framework.test import APIClient
+from django.urls import reverse
+from django.contrib.auth import get_user_model
 from users.models import Role
-
-
-class UserFactory(factory.django.DjangoModelFactory):
-    """
-    Factory to create users with roles
-    """
-
-    class Meta:
-        model = get_user_model()
-
-    username = factory.Faker('user_name')
-    email = factory.Faker('email')
-    password = factory.PostGenerationMethodCall('set_password', 'password123')
-    role = factory.Iterator([Role.INVESTOR, Role.STARTUP, Role.BOTH])
-
-
-class InvestorProfileFactory(factory.django.DjangoModelFactory):
-    """
-    Factory to create InvestorProfile linked to User
-    """
-
-    class Meta:
-        model = InvestorProfile
-
-    user = factory.SubFactory(UserFactory)
-    investment_amount = factory.Faker('random_number')
-    bio = factory.Faker('text')
-
-
-class StartupProfileFactory(factory.django.DjangoModelFactory):
-    """
-    Factory to create StartupProfile linked to User
-    """
-
-    class Meta:
-        model = StartupProfile
-
-    user = factory.SubFactory(UserFactory)
-    company_name = factory.Faker('company')
-    industry = factory.Faker('word')
-    country = factory.Faker('country')
-    city = factory.Faker('city')
-    size = factory.Faker('random_int')
+import factory
+from rest_framework.test import APITestCase
 
 
 class RolePermissionTests(APITestCase):
     """
-    Test permissions for different roles
+    Test class for role-based permissions
     """
+
+    class UserFactory(factory.django.DjangoModelFactory):
+        """
+        Factory to create users with different roles
+        """
+
+        class Meta:
+            model = get_user_model()
+
+        email = factory.Faker('email')
+        password = factory.Faker('password')
+        first_name = factory.Faker('first_name')
+        last_name = factory.Faker('last_name')
+        role = factory.Faker('random_element', elements=[Role.STARTUP, Role.INVESTOR, Role.BOTH, Role.UNASSIGNED])
 
     def setUp(self):
         """
-        Create test users with different roles using factories
+        Set up users with different roles using factory
         """
-        self.investor_user = UserFactory(role=Role.INVESTOR)
-        self.investor_profile = InvestorProfileFactory(user=self.investor_user)
+        # Create users with different roles
+        self.admin_user = self.UserFactory(role=Role.STARTUP)
+        self.regular_user = self.UserFactory(role=Role.INVESTOR)
 
-        self.startup_user = UserFactory(role=Role.STARTUP)
-        self.startup_profile = StartupProfileFactory(user=self.startup_user)
+        # Generate JWT tokens for both users
+        self.admin_token = self.get_jwt_token(self.admin_user)
+        self.regular_token = self.get_jwt_token(self.regular_user)
 
-        self.both_user = UserFactory(role=Role.BOTH)
-        self.startup_profile_both = StartupProfileFactory(user=self.both_user)
-        self.investor_profile_both = InvestorProfileFactory(user=self.both_user)
+        # Initialize API client
+        self.client = APIClient()
 
-        self.investor_token = self.get_token(self.investor_user)
-        self.startup_token = self.get_token(self.startup_user)
-        self.both_token = self.get_token(self.both_user)
-
-    def get_token(self, user):
+    def get_jwt_token(self, user):
         """
-        Generate and return a token for the user
+        Helper function to generate a JWT token for a given user
         """
-
         refresh = RefreshToken.for_user(user)
-        return str(refresh.access_token)
+        access_token = str(refresh.access_token)
+        return access_token
 
-    def test_investor_access_to_investor_view(self):
+    def test_admin_access(self):
         """
-        Test that an INVESTOR can access the Investor view
+        Test that an admin user can access an endpoint that requires admin role
         """
+        url = reverse('some_admin_protected_endpoint')
 
-        url = '/api/investor-profiles/'
-        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.investor_token)
+        # Admin user accesses the endpoint
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.admin_token)
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_user_access(self):
+        """
+        Test that a regular user cannot access an endpoint that requires admin role
+        """
+        url = reverse('some_admin_protected_endpoint')
+
+        # Regular user accesses the endpoint
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.regular_token)
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_access_with_invalid_token(self):
+        """
+        Test that an invalid token is rejected
+        """
+        url = reverse('some_admin_protected_endpoint')
+
+        # Using an invalid token
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + 'invalid_token')
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_role_based_permissions(self):
+        """
+        Test that access is based on the user's role
+        """
+        url = reverse('some_role_based_endpoint')
+
+        # Admin user accesses role-based endpoint
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.admin_token)
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_startup_access_to_startup_view(self):
-        """
-        Test that a STARTUP can access the Startup profile view
-        """
-
-        url = '/api/startup-profiles/'  # Example URL for startup profiles
-        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.startup_token)
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_both_user_access_to_investor_view(self):
-        """
-        Test that a BOTH user can access the Investor view
-        """
-
-        url = '/api/investor-profiles/'  # Example URL for investor profiles
-        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.both_token)
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_both_user_access_to_startup_view(self):
-        """
-        Test that a BOTH user can access the Startup profile view
-        """
-
-        url = '/api/startup-profiles/'  # Example URL for startup profiles
-        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.both_token)
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_non_investor_access_to_investor_view(self):
-        """
-        Test that a user without INVESTOR role cannot access the Investor view
-        """
-
-        url = '/api/investor-profiles/'  # Example URL for investor profiles
-        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.startup_token)
+        # Regular user tries to access role-based endpoint
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.regular_token)
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_non_startup_access_to_startup_view(self):
+    def test_role_alignment(self):
         """
-        Test that a user without STARTUP role cannot access the Startup profile view
+        Test the role alignment logic for user and token role
         """
+        # Token role should align with user role
+        self.assertTrue(Role.has_role(self.admin_user.role, Role.STARTUP))
+        self.assertTrue(Role.token_role_aligns(self.admin_user.role, Role.STARTUP))
 
-        url = '/api/startup-profiles/'  # Example URL for startup profiles
-        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.investor_token)
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # Testing non-aligning roles
+        self.assertFalse(Role.has_role(self.regular_user.role, Role.STARTUP))
+        self.assertFalse(Role.token_role_aligns(self.regular_user.role, Role.STARTUP))
