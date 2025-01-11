@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from .models import NotificationMethod, NotificationCategory, NotificationPreference
-from .serializers import (
+from ..models import NotificationMethod, NotificationCategory, NotificationPreference
+from ..serializers import (
     NotificationMethodSerializer,
     NotificationCategorySerializer,
     NotificationPreferenceSerializer,
@@ -26,7 +26,7 @@ def create_user(cls):
 def create_categories(cls):
     """Helper method to create categories"""
     cls.followCategory = NotificationCategory.objects.create(
-        name="follow", description="Informs about follows"
+        name="follow_test", description="A new investor is following your startup."
     )
     cls.messageCategory = NotificationCategory.objects.create(
         name="message", description="Informs about messages"
@@ -111,7 +111,7 @@ class TestUnitNotificationCategoryModel(TestCase):
         super().tearDownClass()
 
     def test_iscreated_follow(self):
-        actual = NotificationCategory.objects.filter(name="follow").exists()
+        actual = NotificationCategory.objects.filter(name="follow_test").exists()
         self.assertTrue(actual, "Detail: There is no Follow category in the table.")
 
     def test_iscreated_message(self):
@@ -119,9 +119,9 @@ class TestUnitNotificationCategoryModel(TestCase):
         self.assertTrue(actual, "Detail: There is no Message category in the table.")
 
     def test_description_follow(self):
-        actual = NotificationCategory.objects.get(name="follow").description
+        actual = NotificationCategory.objects.get(name="follow_test").description
         self.assertEqual(
-            actual, "Informs about follows", "Detail: Wrong description for Follow."
+            actual, "A new investor is following your startup.", "Detail: Wrong description for Follow."
         )
 
     def test_description_message(self):
@@ -194,7 +194,7 @@ class TestUnitNotificationPreferenceModel(TestCase):
             self.notification_preference.allowed_notification_categories.first().name
         )
         self.assertEqual(
-            actual, "follow", "Detail: There is no follow category for this user."
+            actual, "follow_test", "Detail: There is no follow category for this user."
         )
 
 
@@ -253,7 +253,7 @@ class TestUnitNotificationCategorySerializer(TestCase):
     """
 
     def setUp(self):
-        self.valid_data = {"name": "follow", "description": "Informs about follows"}
+        self.valid_data = {"name": "follow_test", "description": "A new investor is following your startup."}
         self.invalid_data = {"name": "", "description": "Informs about something"}
         self.notification_category = NotificationCategory.objects.create(
             name="message", description="Informs about message"
@@ -329,7 +329,7 @@ class TestUnitNotificationPreferenceSerializer(TestCase):
     def test_serialized_preference_category_name(self):
         self.assertEqual(
             self.serializer.data["allowed_notification_categories"][0]["name"],
-            "follow",
+            "follow_test",
             "Details: Name of category before and after serilizing does not match.",
         )
 
@@ -343,7 +343,7 @@ class TestUnitNotificationPreferenceSerializer(TestCase):
     def test_serialized_preference_category_description(self):
         self.assertEqual(
             self.serializer.data["allowed_notification_categories"][0]["description"],
-            "Informs about follows",
+            "A new investor is following your startup.",
             "Details: Description of category before and after serilizing does not match.",
         )
 

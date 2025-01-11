@@ -5,6 +5,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
+from rest_framework import generics
+from rest_framework import exceptions
+from .models import StartUpNotification
+from .serializers import StartUpNotificationReadSerializer
+from .paginations import StandardResultsSetPagination
+from .permissions import HasStartupProfilePermission, HasStartupAccessPermission
+from rest_framework import generics
 
 from .models import NotificationMethod, NotificationPreference, NotificationCategory
 from .serializers import (
@@ -191,3 +198,37 @@ class NotificationPreferenceView(APIView):
             {"detail": "Notification preferences not set."},
             status=status.HTTP_404_NOT_FOUND,
         )
+
+
+class NotificationListView(generics.ListAPIView):
+    """
+    To get all notifications as a list of dicts
+    """
+    permission_classes = [IsAuthenticated, HasStartupProfilePermission]
+    pagination_class = StandardResultsSetPagination
+    serializer_class = StartUpNotificationReadSerializer
+
+    def get_queryset(self):
+        startup_id = self.request.user.startup_profile.id
+        return StartUpNotification.objects.filter(startup_id=startup_id).order_by('id').select_related('notification_category', 'investor', 'startup')
+
+    def get_serializer_context(self):
+        return {'request': self.request}
+    
+
+class NotificationDetailView(generics.RetrieveAPIView):
+    """
+    To get a single notification and set 'is_read' to True
+    """
+    permission_classes = [IsAuthenticated, HasStartupProfilePermission, HasStartupAccessPermission]
+    queryset = StartUpNotification.objects.all()
+    serializer_class = StartUpNotificationReadSerializer
+    lookup_field = 'id'
+
+    def get_object(self):
+        notification = super().get_object()
+        notification.mark_as_read()
+        return notification
+    
+    def get_serializer_context(self):
+        return {'request': self.request}
