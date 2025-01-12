@@ -10,7 +10,7 @@ router.register(r'projects', ProjectViewSet, basename=app_name)
 
 urlpatterns = [
     path(
-        "api/v1/projects/<int:project_id>/investment/",
+        "<int:project_id>/investment/",
         InvestmentCreateView.as_view(),
         name="project-investment"
     ),

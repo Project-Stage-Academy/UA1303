@@ -64,4 +64,33 @@ class InvestmentCreateSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Investment
-        fields = ['share']
+        fields = ['share', 'investor', 'project']
+        read_only_fields = ['investor', 'project']
+
+    def save(self, **kwargs):
+        investor = kwargs.get('investor')
+        project = kwargs.get('project')
+
+        if not investor or not project:
+            raise serializers.ValidationError("Investor and project are required.")
+
+        investment = Investment(
+            investor=investor,
+            project=project,
+            share=self.validated_data['share']
+        )
+        investment.clean()
+        investment.save()
+        return investment
+
+    def validate_share(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Share must be greater than zero.")
+            
+        if value > 100:
+            raise serializers.ValidationError("Share cannot exceed 100.")
+
+        project = self.context.get('project')
+        if project and (project.total_funding + value > project.funding_goal):
+            raise serializers.ValidationError("Share exceeds the remaining funding goal.")
+        return value
