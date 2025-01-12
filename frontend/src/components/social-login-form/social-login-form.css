@@ -1,0 +1,12 @@
+.social-login-form {
+    width: 100%;
+    max-width: 572px;
+    margin: 10px auto 20px;
+    padding: 0px;
+    border-radius: 6px;
+}
+
+#social-login-buttons {
+    align-items: center;
+    justify-content: center;
+}
