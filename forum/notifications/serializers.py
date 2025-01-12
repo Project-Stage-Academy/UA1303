@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import NotificationMethod, NotificationCategory, NotificationPreference
-from .models import StartUpNotification, InvestorProfile, StartupProfile
+from .models import StartUpNotification, InvestorProfile, StartupProfile, InvestorNotification
 
 
 class NotificationMethodSerializer(serializers.ModelSerializer):
@@ -109,6 +109,49 @@ class StartUpNotificationCreateSerializer(serializers.ModelSerializer):
     
     def validate(self, data):
         if StartUpNotification.objects.filter(
+            notification_category=data['notification_category'],
+            investor=data['investor'],
+            startup=data['startup']
+        ).exists():
+            raise serializers.ValidationError("This notification already exists.")
+        return data
+    
+
+class InvestorNotificationReadSerializer(serializers.ModelSerializer):
+    notification_category = serializers.StringRelatedField(source='notification_category.description', read_only=True)
+    investor = serializers.StringRelatedField(read_only=True)
+
+    notification_url = serializers.HyperlinkedIdentityField(
+        view_name='notifications:investor_notification_detail',  
+        lookup_field='id'  
+    )
+
+    class Meta:
+        model = InvestorNotification
+        fields = ['notification_category', 'investor', 'startup', 'is_read', 'created_at', 'notification_url']
+        read_only_fields = ['notification_category', 'investor', 'startup', 'created_at', 'notification_url']
+
+
+class InvestorNotificationCreateSerializer(serializers.ModelSerializer):
+    notification_category = serializers.PrimaryKeyRelatedField(
+        queryset=NotificationCategory.objects.all()
+    )
+    investor = serializers.PrimaryKeyRelatedField(
+        queryset=InvestorProfile.objects.all()
+    )
+    startup = serializers.PrimaryKeyRelatedField(
+        queryset=StartupProfile.objects.all()
+    )
+
+    class Meta:
+        model = InvestorNotification
+        fields = ['notification_category', 'investor', 'startup', 'is_read']
+
+    def create(self, validated_data):
+        return InvestorNotification.objects.create(**validated_data)
+    
+    def validate(self, data):
+        if InvestorNotification.objects.filter(
             notification_category=data['notification_category'],
             investor=data['investor'],
             startup=data['startup']

@@ -172,3 +172,28 @@ class StartUpNotification(models.Model):
         if not self.is_read:
             self.is_read = True
             self.save()
+
+
+class InvestorNotification(models.Model):
+    notification_category = models.ForeignKey(NotificationCategory, on_delete=models.CASCADE, related_name='investor_notifications')
+    investor = models.ForeignKey(InvestorProfile, on_delete=models.CASCADE, related_name='investor_notifications', db_index=True)
+    startup = models.ForeignKey(StartupProfile, on_delete=models.CASCADE, related_name='investor_notifications')
+    is_read = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Investor Notification"
+        verbose_name_plural = "Investor Notifications"
+        ordering = ['id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['notification_category', 'investor', 'startup'],
+                name='unique_investor_notification'
+            )
+        ]
+
+    def mark_as_read(self):
+        if not self.is_read:
+            self.is_read = True
+            self.save()
