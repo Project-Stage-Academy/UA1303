@@ -165,16 +165,15 @@ class GithubAccessTokenSerializer(serializers.Serializer):
     })
 
     def validate_code(self, value):
-        """Custom validation for the `code` field."""
+        """Validation for the `code` field."""
         if len(value.strip()) == 0:
             raise serializers.ValidationError("The code field cannot be empty or contain only whitespace.")
         return value
 
     def validate_redirect_url(self, value):
-        """Custom validation for the `redirect_url` field."""
+        """Validation for the `redirect_url` field."""
         if len(value.strip()) == 0:
             raise serializers.ValidationError("The redirect_url field cannot be empty or contain only whitespace.")
-        # Add additional validation, like checking if it's a valid URL
         if not value.startswith("http://") and not value.startswith("https://"):
             raise serializers.ValidationError("The redirect_url must be a valid URL starting with http:// or https://.")
         return value
