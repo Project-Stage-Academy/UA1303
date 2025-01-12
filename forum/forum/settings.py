@@ -38,6 +38,7 @@ ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost").split(",")
 # Application definition
 
 INSTALLED_APPS = [
+    'corsheaders',
     "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -60,14 +61,13 @@ INSTALLED_APPS = [
     "dashboard",
     "notifications",
     "channels",
-    "allauth",
-    "allauth.account",
-    "allauth.socialaccount",
-    "allauth.socialaccount.providers.github",
-    "allauth.socialaccount.providers.google",
+    'oauth2_provider',
+    'social_django',
+    'drf_social_oauth2',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -76,7 +76,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "forum.urls"
@@ -92,6 +91,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "social_django.context_processors.backends",
+                "social_django.context_processors.login_redirect",
             ],
         },
     },
@@ -175,7 +176,9 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "oauth2_provider.contrib.rest_framework.OAuth2Authentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "drf_social_oauth2.authentication.SocialAuthentication",
     ],
     'PAGE_SIZE': 50,  # Default pagination page size
 }
@@ -295,7 +298,7 @@ RATE_LIMIT_RATE = "5/m"
 RATE_LIMIT_BLOCK = True
 DOMAIN_NAME = os.getenv("DOMAIN_NAME", "localhost")
 
-# Swagger settings to enable JWT authorization
+
 SWAGGER_SETTINGS = {
     "SECURITY_DEFINITIONS": {
         "Bearer": {
@@ -329,29 +332,55 @@ CACHES = {
 
 RATELIMIT_USE_CACHE = "default"  # Make sure RATELIMIT is reconfigured to use Redis when we add this type of caching
 
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:3000",
+    "http://localhost:3000",
+]
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = [
+    "http://127.0.0.1:3000",
+    "http://localhost:3000",
+]
+CSRF_COOKIE_NAME = 'csrftoken'
+CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read the cookie
+CSRF_COOKIE_SAMESITE = 'Lax'
 
-# Django-allauth settings
-SOCIALACCOUNT_PROVIDERS = {
-    'google': {
-        'EMAIL_AUTHENTICATION': True,
-        'APP': {
-            'client_id': os.getenv("GOOGLE_OAUTH_CLIENT_ID"),
-            'secret': os.getenv("GOOGLE_OAUTH_CLIENT_SECRET")
-        }
-    },
-    'github': {
-        'EMAIL_AUTHENTICATION': True,
-        'APP': {
-            'client_id': os.getenv("GITHUB_OAUTH_CLIENT_ID"),
-            'secret': os.getenv("GITHUB_OAUTH_CLIENT_SECRET")
-        }
-    }
-}
+# Setting to enable OAuth using drf-social-oauth2
+# Do not remove standard ModelBackend. It's required to login into admin and configure OAuth
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.google.GoogleOAuth2',
+    'social_core.backends.github.GithubOAuth2',
+    'drf_social_oauth2.backends.DjangoOAuth2',
+    'django.contrib.auth.backends.ModelBackend',
+)
 
-SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
-SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
-ACCOUNT_AUTHENTICATED_LOGIN_REDIRECTS = True
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_USER_MODEL_USERNAME_FIELD = 'first_name'
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv("GOOGLE_OAUTH_CLIENT_ID")
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET")
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+]
+
+SOCIAL_AUTH_GITHUB_KEY = os.getenv("GITHUB_OAUTH_CLIENT_ID")
+SOCIAL_AUTH_GITHUB_SECRET = os.getenv("GITHUB_OAUTH_CLIENT_SECRET")
+
+SOCIAL_AUTH_GITHUB_SCOPE = ['read:user', 'user:email']
+
+SOCIAL_AUTH_USERNAME_FIELD = 'email'
+
+SOCIAL_AUTH_PIPELINE = (
+    'social_core.pipeline.social_auth.social_details',
+    'social_core.pipeline.social_auth.social_uid',
+    'social_core.pipeline.social_auth.auth_allowed',
+    'social_core.pipeline.social_auth.social_user',
+    'social_core.pipeline.user.get_username',
+
+    # Send a validation email to the user to verify its email address.
+    # Disabled by default.
+    # 'social_core.pipeline.mail.mail_validation',
+
+    'social_core.pipeline.user.create_user',
+    'social_core.pipeline.social_auth.associate_user',
+    'social_core.pipeline.social_auth.load_extra_data',
+)
