@@ -246,11 +246,10 @@ class GithubAccessTokenView(generics.GenericAPIView):
     client_secret = settings.SOCIAL_AUTH_GITHUB_SECRET
 
     def post(self, request):
-        # Extract 'code' and 'redirect_url' from the request data
         code = request.data.get('code')
         redirect_url = request.data.get('redirect_url')
 
-        # Prepare the request to GitHub
+        # Prepare and send request to GitHub
         github_token_url = "https://github.com/login/oauth/access_token"
         headers = {"Accept": "application/json"}
         query_params = {
@@ -261,11 +260,9 @@ class GithubAccessTokenView(generics.GenericAPIView):
         }
 
         try:
-            # Send POST request to GitHub
             response = requests.post(github_token_url, headers=headers, params=query_params)
             response_data = response.json()
 
-            # Check if the response contains an error
             if "error" in response_data:
                 return Response(
                     {"error": response_data},
@@ -283,7 +280,6 @@ class GithubAccessTokenView(generics.GenericAPIView):
             return Response({"github_access_token": access_token}, status=status.HTTP_200_OK)
 
         except requests.RequestException as e:
-            # Handle network errors or issues with the GitHub API
             return Response(
                 {"error": f"Failed to fetch access token from GitHub: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
