@@ -7,10 +7,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework import generics
 from rest_framework import exceptions
-from .models import StartUpNotification
-from .serializers import StartUpNotificationReadSerializer
+from .models import StartUpNotification, InvestorNotification
+from .serializers import StartUpNotificationReadSerializer, InvestorNotificationReadSerializer
 from .paginations import StandardResultsSetPagination
-from .permissions import HasStartupProfilePermission, HasStartupAccessPermission
+from .permissions import HasStartupProfilePermission, HasStartupAccessPermission, HasInvestorProfilePermission, HasInvestorAccessPermission
 from rest_framework import generics
 
 from .models import NotificationMethod, NotificationPreference, NotificationCategory
@@ -223,6 +223,40 @@ class NotificationDetailView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated, HasStartupProfilePermission, HasStartupAccessPermission]
     queryset = StartUpNotification.objects.all()
     serializer_class = StartUpNotificationReadSerializer
+    lookup_field = 'id'
+
+    def get_object(self):
+        notification = super().get_object()
+        notification.mark_as_read()
+        return notification
+    
+    def get_serializer_context(self):
+        return {'request': self.request}
+    
+
+class InvestorNotificationListView(generics.ListAPIView):
+    """
+    To get all notifications as a list of dicts
+    """
+    permission_classes = [IsAuthenticated, HasInvestorProfilePermission]
+    pagination_class = StandardResultsSetPagination
+    serializer_class = InvestorNotificationReadSerializer
+
+    def get_queryset(self):
+        investor_id = self.request.user.investor_profile.id
+        return InvestorNotification.objects.filter(investor_id=investor_id).order_by('id').select_related('notification_category', 'investor', 'startup')
+
+    def get_serializer_context(self):
+        return {'request': self.request}
+    
+
+class InvestorNotificationDetailView(generics.RetrieveAPIView):
+    """
+    To get a single notification and set 'is_read' to True
+    """
+    permission_classes = [IsAuthenticated, HasInvestorProfilePermission, HasInvestorAccessPermission]
+    queryset = InvestorNotification.objects.all()
+    serializer_class = InvestorNotificationReadSerializer
     lookup_field = 'id'
 
     def get_object(self):
