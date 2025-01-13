@@ -15,6 +15,11 @@ from datetime import timedelta
 from pathlib import Path
 import environ
 from dotenv import load_dotenv
+from decouple import config
+
+# SECRET_KEY
+SECRET_KEY = config('SECRET_KEY')
+
 
 load_dotenv()
 env = environ.Env()

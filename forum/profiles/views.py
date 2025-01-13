@@ -5,11 +5,10 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django_ratelimit.decorators import ratelimit
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+from projects.models import Project
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.generics import ListAPIView
 from rest_framework.mixins import ListModelMixin
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
@@ -17,9 +16,9 @@ from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
-from projects.models import Project
 from .models import InvestorProfile, StartupProfile
-from .permissions import IsOwnerOrReadOnly, IsInvestor, IsProfileUser
+from .permissions import IsOwnerOrReadOnly
+from .permissions import role_required
 from .serializers import InvestorProfileSerializer, StartupProfileSerializer, PublicStartupProfileSerializer
 
 
@@ -29,31 +28,31 @@ class InvestorViewSet(ModelViewSet):
     """
     queryset = InvestorProfile.objects.all()
     serializer_class = InvestorProfileSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly, IsInvestor]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
     def get_queryset(self):
-        if not self.request.user.is_authenticated:
-            raise AuthenticationFailed('User is not authenticated.')
+        if self.request.user.is_authenticated:
+            return InvestorProfile.objects.filter(user=self.request.user).select_related(
+                "user"
+            )
+        return InvestorProfile.objects.none()
 
-        return InvestorProfile.objects.filter(user=self.request.user).select_related("user")
-
+    @role_required("INVESTOR")
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-    def get_permissions(self):
+    @role_required("INVESTOR")
+    def list(self, request, *args, **kwargs):
         """
-        Apply the role-based restriction for the 'investor' role
+        Handles GET requests for listing investor profiles.
         """
-        if self.action == 'save_startup' or self.action == 'delete_favorite':
-            self.permission_classes[0].allowed_roles = ['investor']
-        return super().get_permissions()
-
+        return super().list(request, *args, **kwargs)
 
 class StartupProfileViewSet(ModelViewSet):
     """
     API Endpoint for Startup Profiles
     """
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly, IsProfileUser]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
     queryset = StartupProfile.objects.all().order_by('company_name', 'created_at')
     serializer_class = StartupProfileSerializer
 
@@ -62,19 +61,10 @@ class StartupProfileViewSet(ModelViewSet):
     filterset_fields = ['industry', 'country', 'city', 'size']
     ordering_fields = ['company_name', 'created_at']
 
+    @role_required("STARTUP")
     def perform_create(self, serializer):
-        """
-        Automatically assigns startup profile to the right user based on user's token
-        """
+        """Automatically assigns startup profile to the right user based on user's token"""
         serializer.save(user=self.request.user)
-
-    def get_permissions(self):
-        """
-        Apply the role-based restriction for the 'profile_user' role
-        """
-        if self.action == 'save_startup' or self.action == 'delete_favorite':
-            self.permission_classes[0].allowed_roles = ['profile_user']
-        return super().get_permissions()
 
     @swagger_auto_schema(
         operation_summary="The list of Startup Profiles",
@@ -97,16 +87,17 @@ class StartupProfileViewSet(ModelViewSet):
         ),
 
     )
+    @role_required("STARTUP")
     def list(self, request, *args, **kwargs):
         """
-        Handles GET requests for listing startup profiles
+        Handles GET requests for listing startup profiles.
         """
         return super().list(request, *args, **kwargs)
 
 
 class SaveStartupViewSet(ListModelMixin, GenericViewSet):
     """Managing user's favourite startups"""
-    permission_classes = [IsAuthenticated, IsInvestor]
+    permission_classes = [IsAuthenticated]
     serializer_class = StartupProfileSerializer
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -157,6 +148,7 @@ class SaveStartupViewSet(ListModelMixin, GenericViewSet):
             ),
         ]
     )
+    @role_required("INVESTOR")
     def list(self, request, *args, **kwargs):
         """Retrieve a list of followed startups"""
         return super().list(request, *args, **kwargs)
@@ -168,6 +160,7 @@ class SaveStartupViewSet(ListModelMixin, GenericViewSet):
         return investor, startup, startup_exists
 
     @swagger_auto_schema(tags=['Save Follow Startups'])
+    @role_required("INVESTOR")
     @action(detail=True, methods=['post'], url_path='save-favorite', url_name='save-favorite')
     def save_startup(self, request, pk):
         """Add a startup to the user's favourites"""
@@ -177,6 +170,7 @@ class SaveStartupViewSet(ListModelMixin, GenericViewSet):
         startup.followers.add(investor)
         return Response({'detail': f'{startup} is saved'}, status=status.HTTP_200_OK)
 
+    @role_required("INVESTOR")
     @swagger_auto_schema(tags=['Save Follow Startups'])
     @action(detail=True, methods=['delete'], url_path='delete-favorite', url_name='delete-favorite')
     @method_decorator(ratelimit(key='user_or_ip', rate='30/m'))
@@ -200,6 +194,7 @@ class PublicStartupViewSet(ListModelMixin, GenericViewSet):
     search_fields = ['company_name', 'industry', 'country', 'city']
     ordering_fields = ['company_name', 'created_at']
 
+    @role_required("BOTH")
     @swagger_auto_schema(tags=['Public Startups'])
     def list(self, request, *args, **kwargs):
         try:

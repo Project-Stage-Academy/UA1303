@@ -87,3 +87,4 @@ websocket-client==1.8.0
 whitenoise==6.8.2
 wsproto==1.2.0
 zope.interface==7.2
+python-decouple==3.8
