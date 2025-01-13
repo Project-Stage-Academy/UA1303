@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from projects.serializers import ProjectSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from django_countries.serializer_fields import CountryField
 
 from .models import StartupProfile, InvestorProfile
 
@@ -9,6 +10,7 @@ User = get_user_model()
 
 
 class InvestorProfileSerializer(serializers.ModelSerializer):
+    country = CountryField(country_dict=True)
     class Meta:
         model = InvestorProfile
         fields = [
@@ -41,7 +43,7 @@ class InvestorProfileSerializer(serializers.ModelSerializer):
         return value
 
     def validate_account_balance(self, value):
-        if value > 9999999999999.99 or value < 0:
+        if value > 9_999_999_999_999.99 or value < 0:
             raise serializers.ValidationError(
                 "Account balance have incorrect value.It required to be positive and lower than 9999999999999.99"
             )
@@ -55,6 +57,7 @@ class InvestorProfileSerializer(serializers.ModelSerializer):
 
 class StartupProfileSerializer(serializers.ModelSerializer):
     projects = ProjectSerializer(many=True, read_only=True)
+    country = CountryField(country_dict=True)
 
     class Meta:
         model = StartupProfile
