@@ -1,0 +1,38 @@
+
+.form {
+    width: 100%;
+    max-width: 572px;
+    margin: 50px auto 20px;
+    padding: 0px;
+    background-color: #ffffff;
+    border-radius: 6px;
+}
+
+.form-header {
+    padding: 16px 24px 16px 24px;
+    border-bottom: 1px solid #F0F0F0;
+}
+
+.form-header h3 {
+    text-align: start;
+    margin-bottom: 0px;
+    margin-top: 0px;
+}
+
+.form-body {
+    margin: 0; /* Resets any default margin */
+    padding: 10px 24px 10px 24px;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column; /* Stack child elements vertically */
+    justify-content: center; /* Center child elements vertically */
+    align-items: center; /* Center child elements horizontally */
+}
+
+.form-footer {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    padding: 10px 24px 10px 24px;
+    border-top: 1px solid #F0F0F0;
+}

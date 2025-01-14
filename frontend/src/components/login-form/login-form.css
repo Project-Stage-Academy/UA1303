@@ -1,0 +1,27 @@
+
+.form-group {
+    margin-top: 15px;
+    margin-bottom: 15px;
+    width: 100%;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 400;
+}
+
+.form-group input[type="email"],
+.form-group input[type="password"] {
+    width: 100%;
+    padding: 8px;
+    font-size: 1rem;
+    border: 1px solid #D9D9D9;
+    border-radius: 2px;
+    box-sizing: border-box;
+}
+
+.form-group input[type="radio"] {
+    margin-right: 5px;
+    accent-color: #292E32;
+}

@@ -142,3 +142,38 @@ class LogoutSerializer(serializers.Serializer):
             raise serializers.ValidationError({"error": "User ID mismatch between tokens."})
 
         return data
+
+
+class RoleSerializer(serializers.Serializer):
+    role = serializers.ChoiceField(choices=[(role.value, role.name.lower()) for role in VALID_TOKEN_ROLES])
+
+    def validate(self, attrs):
+        role = attrs.get("role")
+        if role is None:
+            raise exceptions.ValidationError({"role": "This field is required."})
+        return attrs
+
+
+class GithubAccessTokenSerializer(serializers.Serializer):
+    code = serializers.CharField(required=True, allow_blank=False, error_messages={
+        'required': 'The code field is required.',
+        'blank': 'The code field cannot be blank.'
+    })
+    redirect_url = serializers.CharField(required=True, allow_blank=False, error_messages={
+        'required': 'The redirect_url field is required.',
+        'blank': 'The redirect_url field cannot be blank.'
+    })
+
+    def validate_code(self, value):
+        """Validation for the `code` field."""
+        if len(value.strip()) == 0:
+            raise serializers.ValidationError("The code field cannot be empty or contain only whitespace.")
+        return value
+
+    def validate_redirect_url(self, value):
+        """Validation for the `redirect_url` field."""
+        if len(value.strip()) == 0:
+            raise serializers.ValidationError("The redirect_url field cannot be empty or contain only whitespace.")
+        if not value.startswith("http://") and not value.startswith("https://"):
+            raise serializers.ValidationError("The redirect_url must be a valid URL starting with http:// or https://.")
+        return value
