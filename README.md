@@ -5,6 +5,9 @@ Forum Project Stage CC Template Repo
 1. Navigate to main directory that contains docker-compose file
 2. Make sure you're using "db" as database host
 3. run `docker-compose up --build`
+4. Set up drf-social-oauth2 Application to handle social authentication [Setup instructions](https://github.com/Project-Stage-Academy/UA1303/wiki/OAuth-authorization.-Setup-and-documentation) 
+5. Your frontend is available at `127.0.0.1:3000`
+6. Your backend is available at `127.0.0.1:8000`
 
 **Project Vision Statement:**
 
