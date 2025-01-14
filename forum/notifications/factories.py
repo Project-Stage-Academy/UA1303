@@ -9,6 +9,7 @@ class UserFactory(DjangoModelFactory):
     class Meta:
         model = CustomUser
 
+    email = factory.Faker('email')
     first_name = factory.Faker('first_name')
     last_name = factory.Faker('last_name')
     email = factory.Faker('email')
@@ -71,3 +72,7 @@ class InvestorNotificationFactory(DjangoModelFactory):
     investor = factory.SubFactory(InvestorProfileFactory)
     startup = factory.SubFactory(StartupProfileFactory)
     is_read = False
+
+    @factory.lazy_attribute
+    def startup(self):
+        return StartupProfileFactory()

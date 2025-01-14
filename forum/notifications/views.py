@@ -218,17 +218,23 @@ class NotificationListView(generics.ListAPIView):
 
 class NotificationDetailView(generics.RetrieveAPIView):
     """
-    To get a single notification and set 'is_read' to True
+    To get a single notification.
     """
     permission_classes = [IsAuthenticated, HasStartupProfilePermission, HasStartupAccessPermission]
     queryset = StartUpNotification.objects.all()
     serializer_class = StartUpNotificationReadSerializer
     lookup_field = 'id'
 
-    def get_object(self):
-        notification = super().get_object()
-        notification.mark_as_read()
-        return notification
+    def patch(self, request, *args, **kwargs):
+        """
+        Mark a notification as read.
+        """
+        instance = self.get_object()
+        if not instance.is_read:
+            instance.is_read = True
+            instance.save()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
     
     def get_serializer_context(self):
         return {'request': self.request}
@@ -244,25 +250,38 @@ class InvestorNotificationListView(generics.ListAPIView):
 
     def get_queryset(self):
         investor_id = self.request.user.investor_profile.id
-        return InvestorNotification.objects.filter(investor_id=investor_id).order_by('id').select_related('notification_category', 'investor', 'startup')
+        queryset = InvestorNotification.objects.filter(investor_id=investor_id).order_by('id').select_related('notification_category', 'investor', 'startup')
+        
+        # Apply notification_category filter if provided
+        notification_category_id = self.request.query_params.get('notification_category')
+        if notification_category_id:
+            queryset = queryset.filter(notification_category_id=notification_category_id)
+        
+        return queryset
 
     def get_serializer_context(self):
         return {'request': self.request}
-    
+
 
 class InvestorNotificationDetailView(generics.RetrieveAPIView):
     """
-    To get a single notification and set 'is_read' to True
+    To get a single notification.
     """
     permission_classes = [IsAuthenticated, HasInvestorProfilePermission, HasInvestorAccessPermission]
     queryset = InvestorNotification.objects.all()
     serializer_class = InvestorNotificationReadSerializer
     lookup_field = 'id'
 
-    def get_object(self):
-        notification = super().get_object()
-        notification.mark_as_read()
-        return notification
+    def patch(self, request, *args, **kwargs):
+        """
+        Mark a notification as read.
+        """
+        instance = self.get_object()
+        if not instance.is_read:
+            instance.is_read = True
+            instance.save()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
     
     def get_serializer_context(self):
         return {'request': self.request}

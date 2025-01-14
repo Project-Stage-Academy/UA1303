@@ -4,6 +4,9 @@ from .models import NotificationCategory
 from profiles.models import InvestorProfile, StartupProfile
 from .serializers import StartUpNotificationCreateSerializer
 from projects.models import Project
+import logging
+
+logger = logging.getLogger(__name__)
 
 @receiver(m2m_changed, sender=StartupProfile.followers.through)
 def create_startup_notification(sender, instance, action, reverse, model, pk_set, **kwargs):
@@ -19,8 +22,9 @@ def create_startup_notification(sender, instance, action, reverse, model, pk_set
             serializer = StartUpNotificationCreateSerializer(data=data)
             if serializer.is_valid():
                 serializer.save()
+                logger.info(f"Notification created for startup.")
             else:
-                print(serializer.errors)
+                logger.error(f"Failed to create notification: {serializer.errors}")
 
 #notify investors when a startup updates their profile
 @receiver(post_save, sender=StartupProfile)
@@ -36,8 +40,9 @@ def notify_startup_update(sender, instance, created, **kwargs):
         serializer = StartUpNotificationCreateSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
+            logger.info(f"Notification created for investor {investor.id}.")
         else:
-            print(serializer.errors)
+            logger.error(f"Failed to create notification: {serializer.errors}")
 
 #notify investors when a startup launches a new project
 @receiver(post_save, sender=Project)
@@ -56,5 +61,6 @@ def notify_investors_about_new_project(sender, instance, created, **kwargs):
         serializer = StartUpNotificationCreateSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
+            logger.info(f"Notification about new project created for investor {investor.id}.")
         else:
-            print(serializer.errors)
+            logger.error(f"Failed to create notification: {serializer.errors}")

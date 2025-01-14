@@ -9,7 +9,7 @@ class HasStartupProfilePermission(permissions.BasePermission):
     """
     def has_permission(self, request, view):
         if not hasattr(request.user, 'startup_profile'):
-            raise NotFound("User does not have a startup profile.")
+            raise PermissionDenied("User does not have a startup profile.")
         return True
 
 class HasStartupAccessPermission(permissions.BasePermission):
@@ -29,7 +29,7 @@ class HasInvestorProfilePermission(permissions.BasePermission):
     """
     def has_permission(self, request, view):
         if not hasattr(request.user, 'investor_profile'):
-            raise NotFound("User does not have an investor profile.")
+            raise PermissionDenied("User does not have an investor profile.")
         return True
     
 
