@@ -52,7 +52,6 @@ logger = logging.getLogger(__name__)
 )
 @api_view(["POST"])
 @ratelimit(key=RATE_LIMIT_KEY, rate=RATE_LIMIT_RATE, block=RATE_LIMIT_BLOCK)
-@api_view(['POST'])
 def password_reset_with_captcha(request):
     """
     Temporarily bypass CAPTCHA validation.
