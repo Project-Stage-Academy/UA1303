@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 @receiver(m2m_changed, sender=StartupProfile.followers.through)
 def create_startup_notification(sender, instance, action, reverse, model, pk_set, **kwargs):
-    if action == 'post_add':
+    if action == 'post_add' and reverse:
         for pk in pk_set:
             investor = InvestorProfile.objects.get(pk=pk)
             notification_category = NotificationCategory.objects.get(name='follow')
