@@ -1,6 +1,6 @@
 import factory
 from factory.django import DjangoModelFactory
-from .models import NotificationCategory, StartUpNotification
+from .models import NotificationCategory, StartUpNotification, InvestorNotification
 from profiles.models import InvestorProfile, StartupProfile
 from users.models import CustomUser, Role
 
@@ -9,6 +9,7 @@ class UserFactory(DjangoModelFactory):
     class Meta:
         model = CustomUser
 
+    email = factory.Faker('email')
     first_name = factory.Faker('first_name')
     last_name = factory.Faker('last_name')
     email = factory.Faker('email')
@@ -62,3 +63,16 @@ class StartUpNotificationFactory(DjangoModelFactory):
     investor = factory.SubFactory(InvestorProfileFactory)
     startup = factory.SubFactory(StartupProfileFactory)
     is_read = False
+
+class InvestorNotificationFactory(DjangoModelFactory):
+    class Meta:
+        model = InvestorNotification
+
+    notification_category = factory.SubFactory(NotificationCategoryFactory)
+    investor = factory.SubFactory(InvestorProfileFactory)
+    startup = factory.SubFactory(StartupProfileFactory)
+    is_read = False
+
+    @factory.lazy_attribute
+    def startup(self):
+        return StartupProfileFactory()
