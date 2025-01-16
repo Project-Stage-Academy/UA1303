@@ -1,5 +1,5 @@
 from decimal import Decimal
-
+from rest_framework.decorators import action
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -15,6 +15,7 @@ from .models import Project
 from profiles.models import StartupProfile, InvestorProfile
 from .serializers import ProjectSerializer, InvestmentCreateSerializer
 from .permissions import IsOwnerOrReadOnly
+from .search.services import SearchService
 
 
 class ProjectViewSet(ModelViewSet):
@@ -37,6 +38,28 @@ class ProjectViewSet(ModelViewSet):
         if not startup:
             raise ValidationError({"detail": "You do not have a startup profile. Please create one before creating a project."})
         serializer.save(startup=startup)
+
+    @action(detail=False, methods=['GET'])
+    def search(self, request):
+        query = request.query_params.get('q', '')
+        filters = {
+            'is_published': True,
+            'industry': request.query_params.get('industry'),
+            'country': request.query_params.get('country'),
+        }
+        sort_by = request.query_params.get('sort_by', '-created_at')
+
+        results = SearchService.search_projects(
+            query=query,
+            filters=filters,
+            sort_by=sort_by
+        )
+
+        serializer = self.get_serializer(
+            [result.to_dict() for result in results],
+            many=True
+        )
+        return Response(serializer.data)
 
 
 class InvestmentCreateView(APIView):
