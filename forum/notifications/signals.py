@@ -24,7 +24,10 @@ def create_startup_notification(sender, instance, action, reverse, model, pk_set
                 serializer.save()
                 logger.info(f"Notification created for startup.")
             else:
-                logger.error(f"Failed to create notification: {serializer.errors}")
+                logger.error(
+                    f"Error creating notification for startup {instance.id} "
+                    f"and investor {investor.id}: {serializer.errors}"
+                )
 
 #notify investors when a startup updates their profile
 @receiver(post_save, sender=StartupProfile)
