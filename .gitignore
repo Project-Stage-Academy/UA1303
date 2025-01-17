@@ -161,6 +161,7 @@ cython_debug/
 #.idea/
 forum/staticfiles/
 .DS_Store
+/.DS_Store
 .idea/
 forum/.DS_Store
 forum/projects/tests/__init__.py
