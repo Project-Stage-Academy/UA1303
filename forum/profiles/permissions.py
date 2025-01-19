@@ -32,10 +32,12 @@ class AbstractRolePermission(BasePermission):
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
             return True
-        try:
-            token_role_value = request.auth.get('role')
-        except AttributeError:
-            raise AuthenticationFailed("Invalid token")
+        if not request.auth or not hasattr(request.auth, "get"):
+            raise AuthenticationFailed("Invalid or missing token")
+
+        token_role_value = request.auth.get('role')
+        if not token_role_value or not token_role_value.isdigit():
+            raise AuthenticationFailed("Invalid role in token")
 
         return int(token_role_value) == self.role
 
