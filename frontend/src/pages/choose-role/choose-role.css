@@ -1,0 +1,13 @@
+
+.form-body .toggle-button-group {
+    display: flex;
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    gap: 32px;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.form-body .toggle-button-group .toggle-button {
+    flex: 1;
+}

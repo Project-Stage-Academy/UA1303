@@ -14,15 +14,13 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.http import HttpResponse, JsonResponse
 from django.urls import path, include, re_path
 from rest_framework.urlpatterns import format_suffix_patterns
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from users.urls import auth_urlpatterns
+
 
 APP_URLS = [
     ('communications', 'communications.urls'),
@@ -64,5 +62,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-    path('accounts/', include('allauth.urls')),
+    re_path(r'^auth/', include('drf_social_oauth2.urls', namespace='drf'))
 ] + api_urlpatterns

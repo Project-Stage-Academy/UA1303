@@ -15,6 +15,20 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.exceptions import APIException
+from rest_framework import status, generics
+from djoser.views import UserViewSet
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from .utils import verify_captcha
+from .serializers import (
+    PasswordResetSerializer,
+    LogoutSerializer,
+    CustomUserSerializer,
+    RoleSerializer,
+    GithubAccessTokenSerializer
+)
 
 from .models import Role
 from .serializers import PasswordResetSerializer, LogoutSerializer, CustomUserSerializer
@@ -208,3 +222,71 @@ class CustomUserViewSet(UserViewSet):
         token_role_value = self.request.auth.get('role')
         token_role_name = Role(token_role_value).name
         return Response({**serializer.data, 'role_value': token_role_value, 'role_name': token_role_name})
+
+
+class ChangeRoleView(generics.GenericAPIView):
+    """Change role for authenticated user. Generates new JWT with updated role."""
+    serializer_class = RoleSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        role = serializer.validated_data["role"]
+        refresh = RefreshToken.for_user(request.user)
+        refresh["role"] = role
+        return JsonResponse(
+            {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+            },
+            status=200,
+        )
+
+
+class GithubAccessTokenView(generics.GenericAPIView):
+    """Get GitHub access_token for OAuth"""
+    serializer_class = GithubAccessTokenSerializer
+    client_id = settings.SOCIAL_AUTH_GITHUB_KEY
+    client_secret = settings.SOCIAL_AUTH_GITHUB_SECRET
+
+    def post(self, request):
+        code = request.data.get('code')
+        redirect_url = request.data.get('redirect_url')
+
+        # Prepare and send request to GitHub
+        github_token_url = "https://github.com/login/oauth/access_token"
+        headers = {"Accept": "application/json"}
+        query_params = {
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "code": code,
+            "redirect_uri": redirect_url,
+        }
+
+        try:
+            response = requests.post(github_token_url, headers=headers, params=query_params)
+            response_data = response.json()
+
+            if "error" in response_data:
+                return Response(
+                    {"error": response_data},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Extract the access token and return it
+            access_token = response_data.get("access_token")
+            if not access_token:
+                return Response(
+                    {"error": "Access token not found in GitHub response."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            return Response({"github_access_token": access_token}, status=status.HTTP_200_OK)
+
+        except requests.RequestException as e:
+            return Response(
+                {"error": f"Failed to fetch access token from GitHub: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

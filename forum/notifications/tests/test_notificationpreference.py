@@ -1,5 +1,10 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.conf import settings
+from django.urls import reverse
+from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from ..models import NotificationMethod, NotificationCategory, NotificationPreference
 from ..serializers import (
     NotificationMethodSerializer,
@@ -7,8 +12,19 @@ from ..serializers import (
     NotificationPreferenceSerializer,
     NotificationPreferenceUpdateSerializer,
 )
+from ..views import ROLE_CATEGORIES
+from users.models import Role
 
 User = get_user_model()
+
+
+def send_get_request_with_role(self, user, role, url):
+    """
+    Helper method to send get request with authorization using the role.
+    Returns response json
+    """
+    auth_header = generate_auth_header(user, role)
+    return self.client.get(url, **auth_header).json()
 
 
 def create_db_data(cls):
@@ -20,16 +36,22 @@ def create_db_data(cls):
 
 def create_user(cls):
     """Helper method to create user and relevant items"""
-    cls.user = User.objects.create_user(email="test@user.com", password="password")
+    cls.user = User.objects.create_user(
+        email="test@user.com", password="password", role=3
+    )
 
 
 def create_categories(cls):
     """Helper method to create categories"""
-    cls.followCategory = NotificationCategory.objects.create(
-        name="follow_test", description="A new investor is following your startup."
-    )
+    cls.followCategory = NotificationCategory.objects.get(name="follow")
     cls.messageCategory = NotificationCategory.objects.create(
         name="message", description="Informs about messages"
+    )
+    cls.projectchangesCategory = NotificationCategory.objects.create(
+        name="project_changes", description="Informs about changes in some project"
+    )
+    cls.subscriptionCategory = NotificationCategory.objects.create(
+        name="subscription", description="Informs about subscription on some project"
     )
 
 
@@ -41,6 +63,24 @@ def create_methods(cls):
     cls.telegramMethod = NotificationMethod.objects.create(
         name="telegram", description="Notification via telegram"
     )
+
+
+def generate_auth_header(user, role):
+    """Helper method to create header with authentication token"""
+    token = generate_jwt_token(user, role)
+    auth_header = {"HTTP_AUTHORIZATION": f"Bearer {token}"}
+    return auth_header
+
+
+def generate_jwt_token(user, role: int):
+    """Helper method to create JWT token based on user and role"""
+    role_enum = Role(role)
+    if role_enum not in [Role.STARTUP, Role.INVESTOR]:
+        raise ValueError("Invalid role. Only Role.STARTUP and Role.INVESTOR are allowed.")
+    
+    refresh = RefreshToken.for_user(user)
+    refresh['role'] = role_enum.value
+    return str(refresh.access_token)
 
 
 class TestUnitNotificationMethodModel(TestCase):
@@ -111,7 +151,7 @@ class TestUnitNotificationCategoryModel(TestCase):
         super().tearDownClass()
 
     def test_iscreated_follow(self):
-        actual = NotificationCategory.objects.filter(name="follow_test").exists()
+        actual = NotificationCategory.objects.filter(name="follow").exists()
         self.assertTrue(actual, "Detail: There is no Follow category in the table.")
 
     def test_iscreated_message(self):
@@ -119,7 +159,7 @@ class TestUnitNotificationCategoryModel(TestCase):
         self.assertTrue(actual, "Detail: There is no Message category in the table.")
 
     def test_description_follow(self):
-        actual = NotificationCategory.objects.get(name="follow_test").description
+        actual = NotificationCategory.objects.get(name="follow").description
         self.assertEqual(
             actual, "A new investor is following your startup.", "Detail: Wrong description for Follow."
         )
@@ -194,7 +234,7 @@ class TestUnitNotificationPreferenceModel(TestCase):
             self.notification_preference.allowed_notification_categories.first().name
         )
         self.assertEqual(
-            actual, "follow_test", "Detail: There is no follow category for this user."
+            actual, "follow", "Detail: There is no follow category for this user."
         )
 
 
@@ -253,7 +293,7 @@ class TestUnitNotificationCategorySerializer(TestCase):
     """
 
     def setUp(self):
-        self.valid_data = {"name": "follow_test", "description": "A new investor is following your startup."}
+        self.valid_data = {"name": "investment", "description": "Somebody invested in your project."}
         self.invalid_data = {"name": "", "description": "Informs about something"}
         self.notification_category = NotificationCategory.objects.create(
             name="message", description="Informs about message"
@@ -329,7 +369,7 @@ class TestUnitNotificationPreferenceSerializer(TestCase):
     def test_serialized_preference_category_name(self):
         self.assertEqual(
             self.serializer.data["allowed_notification_categories"][0]["name"],
-            "follow_test",
+            "follow",
             "Details: Name of category before and after serilizing does not match.",
         )
 
@@ -465,6 +505,101 @@ class TestIntegrationNotificationPreferenceSerializer(TestCase):
     def test_correctness_of_allowed_categories_serializing(self):
         actual = self.preference.allowed_notification_categories
         self.assertEqual(
-            actual, self.notification_preference.allowed_notification_categories,
-            "Details: Different set of categories before serilizing and from serialized model."
+            actual,
+            self.notification_preference.allowed_notification_categories,
+            "Details: Different set of categories before serilizing and from serialized model.",
         )
+
+
+class TestComponentNotificationCategoryEndpoint(APITestCase):
+    """
+    Tests NotificationCategory Endpoint like a component.
+    Ensures that response containes categories related to current
+    user's role.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        create_user(cls)
+        create_categories(cls)
+        cls.url = reverse("notifications:notification_categories")
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+
+    def verify_user_categories(self, role):
+        response_json = send_get_request_with_role(self, self.user, role, self.url)
+        response_categories = [category["name"] for category in response_json]
+        actual = all(
+            response_category in ROLE_CATEGORIES.get(role, [])
+            for response_category in response_categories
+        )
+        self.assertTrue(
+            actual,
+            f"Details: Some categories in the response are not related to role {role}.",
+        )
+
+    def test_show_categories_startup(self):
+        self.verify_user_categories(role=1)
+
+    def test_show_categories_investor(self):
+        self.verify_user_categories(role=2)
+
+
+class TestComponentNotificationPreferenceEndpoint(APITestCase):
+    """
+    Tests returned categories in NotificationPreference Endpoint component.
+    Ensures that response containes categories related to current
+    user's role.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        create_db_data(cls)
+        cls.preference = NotificationPreference.objects.get_or_create(user=cls.user)[0]
+        cls.preference.allowed_notification_methods.add(cls.telegramMethod)
+        cls.preference.allowed_notification_methods.add(cls.popupMethod)
+        cls.preference.allowed_notification_categories.add(cls.followCategory)
+        cls.preference.allowed_notification_categories.add(cls.subscriptionCategory)
+        cls.preference.allowed_notification_categories.add(cls.projectchangesCategory)
+        cls.preference.allowed_notification_categories.add(cls.messageCategory)
+        cls.url = reverse("notifications:user_notification_preferences")
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+
+    def verify_user_preference(self, role):
+        """
+        Helper method to verify user preferences based on the role.
+        """
+        response_json = send_get_request_with_role(self, self.user, role, self.url)
+        response_categories = response_json["allowed_notification_categories"]
+        response_category_names = [category["name"] for category in response_categories]
+        actual = all(
+            response_category in ROLE_CATEGORIES.get(role, [])
+            for response_category in response_category_names
+        )
+        self.assertTrue(
+            actual,
+            f"Details: Some categories in the response are not related to role {role}.",
+        )
+
+    def test_get_user_preference(self):
+        role = 1
+        response_json = send_get_request_with_role(self, self.user, role, self.url)
+        response_user = response_json["user"]
+        self.assertEqual(
+            response_user,
+            self.user.email,
+            "Details: Current response must contain current user.",
+        )
+
+    def test_user_startup_preference(self):
+        self.verify_user_preference(role=1)
+
+    def test_user_investor_preference(self):
+        self.verify_user_preference(role=2)

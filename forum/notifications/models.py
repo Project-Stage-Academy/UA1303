@@ -130,6 +130,26 @@ class NotificationPreference(models.Model):
         ordering = ["user"]
         verbose_name = "Notification Preference"
         verbose_name_plural = "Notification Preferences"
+
+
+class NotificationQuerySet(models.QuerySet):
+    def unread(self):
+        """
+        Filter notifications that are unread.
+        """
+        return self.filter(is_read=False)
+
+    def for_investor(self, investor):
+        """
+        Filter notifications for a specific investor.
+        """
+        return self.filter(investor=investor)
+
+    def for_startup(self, startup):
+        """
+        Filter notifications for a specific startup.
+        """
+        return self.filter(startup=startup)
     
 
 class StartUpNotification(models.Model):
@@ -157,6 +177,9 @@ class StartUpNotification(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Use the custom QuerySet as the default manager
+    objects = NotificationQuerySet.as_manager()
+
     class Meta:
         verbose_name = "Startup Notification"
         verbose_name_plural = "Startup Notifications"
@@ -172,3 +195,62 @@ class StartUpNotification(models.Model):
         if not self.is_read:
             self.is_read = True
             self.save()
+
+    @classmethod
+    def mark_all_as_read(cls, user):
+        """
+        Mark all unread notifications for a specific user as read.
+        """
+        cls.objects.unread().for_startup(user.startup_profile).update(is_read=True)
+
+
+class InvestorNotification(models.Model):
+    """
+    Represents a notification sent to an investor about a startup's activity.
+
+    Attributes:
+        notification_category (NotificationCategory): The category of notification.
+        investor (InvestorProfile): The investor related to the notification.
+        startup (StartupProfile): The startup that received the notification.
+        is_read (bool): Indicates whether the notification has been read.
+        created_at (datetime): The date and time the notification was created.
+        updated_at: The date and time the notification was updated.
+
+    Related models:
+        NotificationCategory: The category of notification.
+        StartupProfile: The startup who triggered the notification. 
+        InvestorProfile: The investor who received the notification.
+        Project: The project associated with the notification (if applicable).
+    """
+    notification_category = models.ForeignKey(NotificationCategory, on_delete=models.CASCADE, related_name='investor_notifications')
+    investor = models.ForeignKey(InvestorProfile, on_delete=models.CASCADE, related_name='investor_notifications', db_index=True)
+    startup = models.ForeignKey(StartupProfile, on_delete=models.CASCADE, related_name='investor_notifications')
+    is_read = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Use the custom QuerySet as the default manager
+    objects = NotificationQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = "Investor Notification"
+        verbose_name_plural = "Investor Notifications"
+        ordering = ['id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['notification_category', 'investor', 'startup'],
+                name='unique_investor_notification'
+            )
+        ]
+
+    def mark_as_read(self):
+        if not self.is_read:
+            self.is_read = True
+            self.save()
+
+    @classmethod
+    def mark_all_as_read(cls, user):
+        """
+        Mark all unread notifications for a specific user as read.
+        """
+        cls.objects.unread().for_investor(user.investor_profile).update(is_read=True)
