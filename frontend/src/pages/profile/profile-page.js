@@ -1,7 +1,7 @@
 import {useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ENDPOINTS } from '../../api/config';
-import { getAuthHeaders } from '../../api/auth';
+import axiosInstance from '../../api/axios-instance';
 import './profile-page.css';
 
 const ProfilePage = () => {
@@ -12,18 +12,8 @@ const ProfilePage = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await fetch(`${ENDPOINTS.ME}`, {
-          method: 'GET',
-          headers: {
-            ...getAuthHeaders(),
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch profile data');
-        }
-
-        const data = await response.json();
+        const response = await axiosInstance.get(ENDPOINTS.ME);
+        const data = response.data;
         setProfile(data);
       } catch (err) {
         setError(err.message);

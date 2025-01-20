@@ -1,9 +1,11 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ENDPOINTS } from '../../api/config';
+import axiosInstance from '../../api/axios-instance';
 
 
 const OAuthCallback = () => {
+  const [error, setError] = useState(null);
   const hasProcessed = useRef(false); // Use a ref to avoid re-renders
   const navigate = useNavigate();
   const drfSocialOauthClientId = process.env.REACT_APP_SOCIALAUTH_CLIENT_ID;
@@ -15,6 +17,11 @@ const OAuthCallback = () => {
     localStorage.setItem('refresh_token', data.refresh_token);
     navigate('/choose_role');
   }, [navigate]);
+
+  const clearTokens = useCallback(() => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+  }, []);
 
   const handleGoogleFlow = useCallback(async (token) => {
 
@@ -39,31 +46,21 @@ const OAuthCallback = () => {
       const data = await response.json();
       saveTokensAndRedirect(data);
     } catch (error) {
-      console.error('Error in Google flow:', error);
+      clearTokens();
+      setError('Google login failed.');
       navigate('/');
     }
-  }, [navigate, saveTokensAndRedirect, convertTokenUrl, drfSocialOauthClientId]);
+  }, [navigate, saveTokensAndRedirect, clearTokens, convertTokenUrl, drfSocialOauthClientId]);
 
   const handleGithubFlow = useCallback(async (code) => {
-    const githubTokenURL = `${ENDPOINTS.GITHUB_TOKEN}`
-
+    const payload = {
+      code: code,
+      redirect_uri: redirectURI,
+    };
     try {
-      const backendResponse = await fetch(githubTokenURL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          code: code,
-          redirect_uri: redirectURI,
-        }),
-      });
+      const backendResponse = await axiosInstance.post(ENDPOINTS.GITHUB_TOKEN, payload);
 
-      if (!backendResponse.ok) {
-        throw new Error(`GitHub token exchange failed: ${backendResponse.status}`);
-      }
-
-      const responseData = await backendResponse.json();
+      const responseData = backendResponse.data;
       const githubAccessToken = responseData.github_access_token;
 
       if (!githubAccessToken) {
@@ -90,10 +87,11 @@ const OAuthCallback = () => {
       const data = await response.json();
       saveTokensAndRedirect(data);
     } catch (error) {
-      console.error('Error in GitHub flow:', error);
+      clearTokens();
+      setError('Google login failed.');
       navigate('/');
     }
-  }, [navigate, saveTokensAndRedirect, convertTokenUrl, drfSocialOauthClientId, redirectURI]);
+  }, [navigate, saveTokensAndRedirect, clearTokens, convertTokenUrl, drfSocialOauthClientId, redirectURI]);
 
   useEffect(() => {
     if (hasProcessed.current) return; // Prevent multiple executions

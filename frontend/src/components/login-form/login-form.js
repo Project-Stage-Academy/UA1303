@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axiosInstance from '../../api/axios-instance';
 import Button from '../button/button';
 import Form from '../input-form/input-form';
 import './login-form.css';
 import { ENDPOINTS } from '../../api/config';
+import { setAccessToken, setRefreshToken } from '../../utils/auth';
 
 const LoginForm = () => {
   const [email, setEmail] = useState('');
@@ -26,23 +28,12 @@ const LoginForm = () => {
     };
 
     try {
-      const response = await fetch(`${ENDPOINTS.LOGIN}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      const response = await axiosInstance.post(ENDPOINTS.LOGIN, payload);
+      const data = response.data;
 
-      if (!response.ok) {
-        throw new Error('Login failed. Please check your credentials.');
-      }
-
-      const data = await response.json();
-
-      // Save JWT tokens in localStorage
-      localStorage.setItem('accessToken', data.access);
-      localStorage.setItem('refreshToken', data.refresh);
+      // Save JWT tokens
+      setAccessToken(data.access);
+      setRefreshToken(data.refresh);
 
       // Redirect to the profile page
       navigate('/my_profile/');
