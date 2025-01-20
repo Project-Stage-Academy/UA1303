@@ -3,11 +3,31 @@ from django.core.validators import validate_email
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
-from djoser.serializers import UserSerializer
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework import serializers, exceptions
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import CustomUser, Role
+import logging
+from django.db import transaction
+from notifications.models import(
+    NotificationCategory,
+    NotificationMethod,
+    NotificationPreference
+)
+
+logger = logging.getLogger(__name__)
+
+def create_default_notification_preferences(user):
+    try:
+        with transaction.atomic():
+            default_methods = NotificationMethod.objects.filter(name__in=["email", "in_app"])
+            default_categories = NotificationCategory.objects.filter(name__in=["follow", "profile_update", "new_project"])
+            notification_preference = NotificationPreference.objects.create(user=user)
+            notification_preference.allowed_notification_methods.set(default_methods)
+            notification_preference.allowed_notification_categories.set(default_categories)
+            logger.info(f"Default notification preferences set to the user.")
+    except Exception as e:
+        logger.error(f"Error creating default notification preferences: {e}")
 
 
 class PasswordResetSerializer(serializers.Serializer):
@@ -36,7 +56,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ("user_id", "created_at", "updated_at")
         extra_kwargs = {"password": {"write_only": True}}
-
+    
     def create(self, validated_data):
         password = validated_data.pop("password")
         instance = CustomUser.objects.create(**validated_data)
@@ -44,6 +64,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
             self.validate_password(password)
             instance.set_password(password)
         instance.save()
+
+        create_default_notification_preferences(instance)
         return instance
 
     def update(self, instance, validated_data):

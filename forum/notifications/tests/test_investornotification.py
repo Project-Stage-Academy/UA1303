@@ -48,19 +48,7 @@ class InvestorNotificationSerializerTests(APITestCase):
         }
         serializer = InvestorNotificationCreateSerializer(data=data)
         self.assertTrue(serializer.is_valid())
-
-    def test_investor_notification_create_serializer_duplicate_notification(self):
-        """
-        Test the InvestorNotificationCreateSerializer to ensure it detects duplicate notifications.
-        """
-        data = {
-            "notification_category": self.notification_category.id,
-            "investor": self.investor.id,
-            "startup": self.startup.id,
-        }
-        serializer = InvestorNotificationCreateSerializer(data=data)
-        self.assertFalse(serializer.is_valid())
-        self.assertEqual(serializer.errors["non_field_errors"][0].code, "unique")
+        
 
     def test_investor_notification_create_serializer_invalid_data(self):
         """

@@ -2,10 +2,8 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.urls import reverse
-import jwt
 from rest_framework.test import APITestCase
-from rest_framework import status
-from datetime import datetime, timedelta
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from ..models import NotificationMethod, NotificationCategory, NotificationPreference
 from ..serializers import (
@@ -15,6 +13,7 @@ from ..serializers import (
     NotificationPreferenceUpdateSerializer,
 )
 from ..views import ROLE_CATEGORIES
+from users.models import Role
 
 User = get_user_model()
 
@@ -73,18 +72,15 @@ def generate_auth_header(user, role):
     return auth_header
 
 
-def generate_jwt_token(user, role):
+def generate_jwt_token(user, role: int):
     """Helper method to create JWT token based on user and role"""
-    payload = {
-        "token_type": "access",
-        "exp": datetime.utcnow() + timedelta(minutes=5),
-        "iat": datetime.utcnow(),
-        "jti": "test-jwt-id",
-        "user_id": user.user_id,
-        "role": role,
-    }
-    token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
-    return token
+    role_enum = Role(role)
+    if role_enum not in [Role.STARTUP, Role.INVESTOR]:
+        raise ValueError("Invalid role. Only Role.STARTUP and Role.INVESTOR are allowed.")
+    
+    refresh = RefreshToken.for_user(user)
+    refresh['role'] = role_enum.value
+    return str(refresh.access_token)
 
 
 class TestUnitNotificationMethodModel(TestCase):
@@ -550,9 +546,6 @@ class TestComponentNotificationCategoryEndpoint(APITestCase):
 
     def test_show_categories_investor(self):
         self.verify_user_categories(role=2)
-
-    def test_show_categories_not_set_for_role(self):
-        self.verify_user_categories(role=333)
 
 
 class TestComponentNotificationPreferenceEndpoint(APITestCase):

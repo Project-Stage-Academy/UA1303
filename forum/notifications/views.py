@@ -2,7 +2,7 @@ import logging
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import exceptions, generics, status
+from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 ROLE_CATEGORIES = {
     Role.STARTUP: ["follow"],
-    Role.INVESTOR: ["update", "project"],
+    Role.INVESTOR: ["profile_update", "new_project"],
 }
 
 PREFERENCE_RESPONSES = {
@@ -447,3 +447,4 @@ class RoleLayer:
         new_categories += request.data["allowed_notification_categories"]
         current_data["allowed_notification_categories"] = new_categories
         return current_data
+    

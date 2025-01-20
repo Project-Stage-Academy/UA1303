@@ -29,8 +29,4 @@ class Migration(migrations.Migration):
                 'ordering': ['id'],
             },
         ),
-        migrations.AddConstraint(
-            model_name='investornotification',
-            constraint=models.UniqueConstraint(fields=('notification_category', 'investor', 'startup'), name='unique_investor_notification'),
-        ),
     ]
