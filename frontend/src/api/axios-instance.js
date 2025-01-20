@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { API_BASE_URL, ENDPOINTS } from './config';
-import { getAccessToken, getRefreshToken, setAccessToken } from '../utils/auth';
+import { API_BASE_URL} from './config';
+import { getAccessToken, refreshToken} from '../utils/auth';
 
 const axiosInstance = axios.create({
     baseURL: API_BASE_URL,
@@ -9,21 +9,6 @@ const axiosInstance = axios.create({
     },
   });
   
-  // Avoiding sending two requests in strict mode
-  let isRefreshing = false; 
-  let failedQueue = [];
-  
-  const processQueue = (error, token = null) => {
-    failedQueue.forEach((promise) => {
-      if (token) {
-        promise.resolve(token);
-      } else {
-        promise.reject(error);
-      }
-    });
-    failedQueue = [];
-  };
-
   // Request Interceptor: Include Access Token
   axiosInstance.interceptors.request.use(
     (config) => {
@@ -44,45 +29,16 @@ const axiosInstance = axios.create({
   
       // If 401 error, try refreshing the token
       if (error.response && error.response.status === 401 && !originalRequest._retry) {
-        if (isRefreshing) {
-          // Push requests into queue while token is being refreshed
-          return new Promise((resolve, reject) => {
-            failedQueue.push({ resolve, reject });
-          })
-            .then((token) => {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-              return axiosInstance(originalRequest);
-            })
-            .catch((err) => Promise.reject(err));
-        }
-  
         originalRequest._retry = true;
-        isRefreshing = true;
   
         try {
-          const refreshToken = getRefreshToken();
-  
-          const response = await axios.post(
-            `${API_BASE_URL}${ENDPOINTS.REFRESH_TOKEN}`,
-            { refresh: refreshToken },
-            { headers: { 'Content-Type': 'application/json' } }
-          );
-  
-          const newAccessToken = response.data.access;
-          setAccessToken(newAccessToken);
-  
-          // Process the queued requests with the new token
-          processQueue(null, newAccessToken);
-  
+          const newAccessToken = await refreshToken();
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           return axiosInstance(originalRequest);
         } catch (refreshError) {
-          processQueue(refreshError, null);
           console.error('Token refresh failed. Redirecting to login.');
-          window.location.href = '/login';
+          window.location.href = '/';
           return Promise.reject(refreshError);
-        } finally {
-          isRefreshing = false;
         }
       }
   

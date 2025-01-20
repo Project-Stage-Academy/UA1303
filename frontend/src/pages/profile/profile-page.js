@@ -1,4 +1,4 @@
-import {useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ENDPOINTS } from '../../api/config';
 import axiosInstance from '../../api/axios-instance';
