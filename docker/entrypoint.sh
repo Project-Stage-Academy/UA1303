@@ -2,7 +2,7 @@
 set -e
 
 echo 'Trying to connect the database.'
-while ! pg_isready -h db -p 5432 -U '$DB_USER'; do
+while ! pg_isready -h "$DB_HOST" -p 5432 -U "$DB_USER"; do
   echo 'Waiting for PostgreSQL to be ready...'
   sleep 1
 done
