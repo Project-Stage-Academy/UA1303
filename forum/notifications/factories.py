@@ -3,6 +3,7 @@ from factory.django import DjangoModelFactory
 from .models import NotificationCategory, StartUpNotification, InvestorNotification
 from profiles.models import InvestorProfile, StartupProfile
 from users.models import CustomUser, Role
+from projects.models import Project, Investment
 
 
 class UserFactory(DjangoModelFactory):
@@ -76,3 +77,21 @@ class InvestorNotificationFactory(DjangoModelFactory):
     @factory.lazy_attribute
     def startup(self):
         return StartupProfileFactory()
+
+class ProjectFactory(DjangoModelFactory):
+    class Meta:
+        model = Project
+
+    startup = factory.SubFactory(StartupProfileFactory)
+    title = factory.Faker('sentence', nb_words=4)
+    funding_goal = factory.Faker('pydecimal', left_digits=6, right_digits=2, positive=True)
+    is_published = True
+    is_completed = False
+
+class InvestmentFactory(DjangoModelFactory):
+    class Meta:
+        model = Investment
+
+    investor = factory.SubFactory(InvestorProfileFactory)
+    project = factory.SubFactory(ProjectFactory)
+    share = factory.Faker('pydecimal', left_digits=5, right_digits=2, positive=True)
