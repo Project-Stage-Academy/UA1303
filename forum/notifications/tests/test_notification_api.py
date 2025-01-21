@@ -37,17 +37,34 @@ class NotificationsAPITests(APITestCase):
         create_default_notification_preferences(cls.investor_2.user)
 
         cls.auth_header_startup = generate_auth_header(cls.startup.user, 1)
-        cls.auth_header_invesor_1 = generate_auth_header(cls.investor_1.user, 2)
-        cls.auth_header_invesor_2 = generate_auth_header(cls.investor_2.user, 2)
+        cls.auth_header_investor_1 = generate_auth_header(cls.investor_1.user, 2)
+        cls.auth_header_investor_2 = generate_auth_header(cls.investor_2.user, 2)
+
+        cls.project_info = {
+            "description": "TEST",
+            "title": "TEST",
+            "funding_goal": "10000",
+            "is_published": True
+        }
 
 
     def test_startup_follow_notifications(self):        
+        """
+        Test the notification flow when investors follow a startup.
+        Tests how 'follow' signals behave with different notification preferences.
+        
+        Verifies:
+        1. Follow notifications are enabled by default
+        2. Startup receives notification when followed
+        3. Notification count increases appropriately
+        4. Disabling notifications prevents new follow notifications
+        """
         url = reverse('notifications:user_notification_preferences')
         response = self.client.get(url, **self.auth_header_startup)
         self.assertIn('follow', [category['name'] for category in response.json()['allowed_notification_categories']])
 
         url = reverse('profiles:startups-save-favorite', kwargs={'pk': self.startup.pk})
-        response = self.client.post(url, **self.auth_header_invesor_1)
+        response = self.client.post(url, **self.auth_header_investor_1)
         self.assertIn('is saved', response.json()['detail'])
 
         url = reverse('notifications:startup_notifications')
@@ -63,7 +80,7 @@ class NotificationsAPITests(APITestCase):
         self.assertEqual(response.json(), {'detail': 'Notification preferences updated successfully.'})
 
         url = reverse('profiles:startups-save-favorite', kwargs={'pk': self.startup.pk})
-        response = self.client.post(url, **self.auth_header_invesor_2)
+        response = self.client.post(url, **self.auth_header_investor_2)
 
         url = reverse('notifications:startup_notifications')
         response = self.client.get(url, **self.auth_header_startup)
@@ -71,10 +88,20 @@ class NotificationsAPITests(APITestCase):
     
     
     def test_startup_update_notifications(self):
+        """
+        Test notifications sent when a startup updates their profile.
+        Tests how 'profile_update' signals behave with different notification preferences.
+        
+        Verifies:
+        1. Followers receive notifications for profile updates
+        2. Notification preferences affect update notifications
+        3. Only followers with enabled preferences receive updates
+        4. Notification counts are accurate after preferences change
+        """
         response = self.follow_startup(
             self.startup,
             self.auth_header_startup,
-            (self.auth_header_invesor_1, self.auth_header_invesor_2)
+            (self.auth_header_investor_1, self.auth_header_investor_2)
         )
         self.assertEqual(response.json()['count'], 2, "Expected 2 notifications.")
 
@@ -83,7 +110,7 @@ class NotificationsAPITests(APITestCase):
             "allowed_notification_categories": []
         }
         url = reverse('notifications:user_notification_preferences')
-        response = self.client.put(url, body, format='json', **self.auth_header_invesor_1)
+        response = self.client.put(url, body, format='json', **self.auth_header_investor_1)
         self.assertEqual(response.json(), {'detail': 'Notification preferences updated successfully.'})
 
         url = reverse('profiles:startup-profile-detail', kwargs={'pk': self.startup.pk})
@@ -98,29 +125,32 @@ class NotificationsAPITests(APITestCase):
         self.assertEqual(response.json()['phone'], "+380987654321")
 
         url = reverse('notifications:investor_notifications')
-        response = self.client.get(url, **self.auth_header_invesor_1)
+        response = self.client.get(url, **self.auth_header_investor_1)
         self.assertEqual(response.json()['count'], 0, "Expected 0 notifications.")
-        response = self.client.get(url, **self.auth_header_invesor_2)
+        response = self.client.get(url, **self.auth_header_investor_2)
         self.assertEqual(response.json()['count'], 1, "Expected 1 notification.")
 
 
     def test_new_project_notifications(self):
+        """
+        Test notifications sent when a startup creates new projects.
+        Tests how 'new_project' signals behave with different notification preferences.
+        
+        Verifies:
+        1. Followers receive notifications for new projects
+        2. Notification preferences affect project notifications
+        3. Multiple projects generate multiple notifications
+        4. Notification counts are accurate after preferences change
+        """
         response = self.follow_startup(
             self.startup,
             self.auth_header_startup,
-            (self.auth_header_invesor_1, self.auth_header_invesor_2)
+            (self.auth_header_investor_1, self.auth_header_investor_2)
         )
         self.assertEqual(response.json()['count'], 2, "Expected 2 notifications.")
 
-        project_info = {
-            "description": "TEST",
-            "title": "TEST",
-            "funding_goal": "10000",
-            "is_published": True
-        }
-
         url = reverse('projects:projects-list')
-        response = self.client.post(url, project_info, format='json', **self.auth_header_startup)
+        response = self.client.post(url, self.project_info, format='json', **self.auth_header_startup)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         
         body = {
@@ -128,17 +158,49 @@ class NotificationsAPITests(APITestCase):
             "allowed_notification_categories": []
         }
         url = reverse('notifications:user_notification_preferences')
-        response = self.client.put(url, body, format='json', **self.auth_header_invesor_1)
+        response = self.client.put(url, body, format='json', **self.auth_header_investor_1)
         self.assertEqual(response.json(), {'detail': 'Notification preferences updated successfully.'})
 
         url = reverse('projects:projects-list')
-        project_info['title'] = "Second project"
-        response = self.client.post(url, project_info, format='json', **self.auth_header_startup)
+        self.project_info['title'] = "Second project"
+        response = self.client.post(url, self.project_info, format='json', **self.auth_header_startup)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         url = reverse('notifications:investor_notifications')
-        response = self.client.get(url, **self.auth_header_invesor_1)
+        response = self.client.get(url, **self.auth_header_investor_1)
         self.assertEqual(response.json()['count'], 1, "Expected 1 notification.")
-        response = self.client.get(url, **self.auth_header_invesor_2)
+        response = self.client.get(url, **self.auth_header_investor_2)
         self.assertEqual(response.json()['count'], 2, "Expected 2 notifications.")
         
+
+    def test_in_app_preference(self):
+        """
+        Test that in-app notification preferences are properly handled when:
+        1. A startup is followed by multiple investors
+        2. Investor 1 excludes 'in_app' preference
+        3. The notification system tracks that preference correctly for the investor
+        4. Investor 2 still receives the notification
+        """
+        response = self.follow_startup(
+            self.startup,
+            self.auth_header_startup,
+            (self.auth_header_investor_1, self.auth_header_investor_2)
+        )
+        
+        body = {
+            "allowed_notification_methods": [1],
+            "allowed_notification_categories": [2, 3]
+        }
+        url = reverse('notifications:user_notification_preferences')
+        response = self.client.put(url, body, format='json', **self.auth_header_investor_1)
+        self.assertEqual(response.json(), {'detail': 'Notification preferences updated successfully.'})
+
+        url = reverse('projects:projects-list')
+        response = self.client.post(url, self.project_info, format='json', **self.auth_header_startup)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        url = reverse('notifications:investor_notifications')
+        response = self.client.get(url, **self.auth_header_investor_1)
+        self.assertEqual(response.json()['count'], 0, "Expected 0 notifications.")
+        response = self.client.get(url, **self.auth_header_investor_2)
+        self.assertEqual(response.json()['count'], 1, "Expected 1 notification.")
