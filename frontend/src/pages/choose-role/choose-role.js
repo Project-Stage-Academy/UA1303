@@ -1,6 +1,8 @@
 import { ENDPOINTS } from '../../api/config';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { setAccessToken, setRefreshToken } from '../../utils/auth';
+import axiosInstance from '../../api/axios-instance';
 import Form from '../../components/input-form/input-form';
 import Button from '../../components/button/button';
 import ToggleButtonGroup from '../../components/toggle-button-group/toggle-button-group';
@@ -10,36 +12,20 @@ import './choose-role.css';
 const ChooseRole = () => {
 
     const [selectedRole, setSelectedRole] = useState(1); // Default to "Startup" (1)
+    const [error, setError] = useState(null);
     const navigate = useNavigate();
-    const url = `${ENDPOINTS.CHANGE_ROLE}`;
 
     const handleConfirm = async () => {
-        const accessToken = localStorage.getItem('access_token'); // Get token from localStorage
-        if (!accessToken) {
-          console.error('No access token found');
-          navigate('/'); // Redirect to home if no token
-          return;
-        }
-    
+      const payload = {
+        role: selectedRole,
+      };
         try {
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${accessToken}`, // Include drf-social-oauth2 token in Authorization header
-            },
-            body: JSON.stringify({ role: selectedRole }),
-          });
-    
-          if (!response.ok) {
-            throw new Error('Failed to change role');
-          }
-          
-          const data = await response.json();
+          const response = await axiosInstance.post(ENDPOINTS.CHANGE_ROLE, payload);
+          const data = response.data;
 
-          // Save JWT tokens in localStorage
-          localStorage.setItem('accessToken', data.access);
-          localStorage.setItem('refreshToken', data.refresh);
+          // Save JWT tokens in cookies
+          setAccessToken(data.access);
+          setRefreshToken(data.refresh);
 
           // Remove drf-social-oauth2 tokens from localStorage
           localStorage.removeItem('access_token');
@@ -48,9 +34,9 @@ const ChooseRole = () => {
           // Redirect to profile page on success
           navigate('/my_profile/');
         } catch (error) {
-          console.error(error.message);
+          setError(error.message || 'Something went wrong. Please try again.');
           // Redirect to home page on error
-          navigate('/');
+          // navigate('/');
         }
       };
 
