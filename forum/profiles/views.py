@@ -18,7 +18,7 @@ from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
 from .models import InvestorProfile, StartupProfile
 from .permissions import IsOwnerOrReadOnly
-from .serializers import InvestorProfileSerializer, StartupProfileSerializer, PublicStartupProfileSerializer
+from .serializers import InvestorProfileSerializer, StartupProfileSerializer, PublicStartupProfileSerializer, ViewedStratupCreateSerializer
 from projects.models import Project
 
 
@@ -84,6 +84,37 @@ class StartupProfileViewSet(ModelViewSet):
         Handles GET requests for listing startup profiles.
         """
         return super().list(request, *args, **kwargs)
+    
+    @swagger_auto_schema(tags=['Startup Views'])
+    @action(detail=True, methods=['post'], url_path='view', url_name='view-startup')
+    def track_view(self, request, pk=None):
+        """Track that a startup was viewed by the current user"""
+        if not request.user.is_authenticated:
+            return Response({'detail': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        startup = self.get_object()
+        investor = InvestorProfile.objects.get(user=request.user)
+        
+        print("********************")
+        # Create or update view history
+        ViewedStratupCreateSerializer.objects.update_or_create(
+            investor=investor,
+            startup=startup
+        )
+        
+        return Response({'detail': f'View recorded for {startup.company_name}'}, status=status.HTTP_200_OK)
+
+    def retrieve(self, request, *args, **kwargs):
+        """Override retrieve to track views"""
+        print("###############")
+
+        response = super().retrieve(request, *args, **kwargs)
+        
+        # Only track views for authenticated investors
+        #if request.user.is_authenticated and hasattr(request.user, 'investorprofile'):
+        self.track_view(request, pk=kwargs.get('pk'))
+        
+        return response
 
 
 class SaveStartupViewSet(ListModelMixin, GenericViewSet):
