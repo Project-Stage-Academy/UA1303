@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     "allauth.socialaccount.providers.github",
     "allauth.socialaccount.providers.google",
+    "django_elasticsearch_dsl",
 ]
 
 MIDDLEWARE = [
@@ -368,7 +369,7 @@ ACCOUNT_USER_MODEL_USERNAME_FIELD = 'first_name'
 # Elasticsearch Configuration
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': 'localhost:9200'
+        'hosts': 'http://localhost:9200'
     },
 }
 
