@@ -19,6 +19,22 @@ services:
       interval: 10s
       retries: 5
 
+  mongodb:
+    image: mongo:5
+    container_name: forum_mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      retries: 5
+
 
   app:
     build:
@@ -36,6 +52,10 @@ services:
       DATABASE_PASSWORD: ${DB_PASSWORD}
       DATABASE_HOST: ${DB_HOST}
       DATABASE_PORT: ${DB_PORT}
+      # MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      # MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_HOST: ${MONGO_HOST}
+      MONGO_PORT: ${MONGO_PORT}
     volumes:
       - .:/app
       - static_volume:/app/static
@@ -44,6 +64,7 @@ services:
       - "8000:8000"
     depends_on:
       - db
+      - mongodb
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health/" ]
       interval: 10s
@@ -68,3 +89,4 @@ volumes:
   static_volume:
   media_volume:
   db_data:
+  mongo_data:

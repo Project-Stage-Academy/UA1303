@@ -16,6 +16,7 @@ from pathlib import Path
 
 import environ
 from dotenv import load_dotenv
+from mongoengine import connect
 
 load_dotenv()
 env = environ.Env()
@@ -77,7 +78,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "forum.urls"
@@ -124,6 +124,17 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT"),
     }
 }
+
+# Connect to MongoDB
+MONGO_HOST = os.getenv('MONGO_HOST')
+MONGO_PORT = os.getenv('MONGO_PORT')
+
+connect(
+    db=os.getenv('MONGO_DB_NAME'),
+    username=os.getenv('MONGO_INITDB_ROOT_USERNAME'),
+    password=os.getenv('MONGO_INITDB_ROOT_PASSWORD'),
+    host=f"mongodb://{MONGO_HOST}:{MONGO_PORT}/"
+)
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators

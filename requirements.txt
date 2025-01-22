@@ -57,6 +57,7 @@ pylint==3.3.2
 pylint-django==2.6.1
 pylint-plugin-utils==0.8.2
 pyOpenSSL==24.3.0
+pymongo==4.10.1
 PySocks==1.7.1
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
@@ -88,3 +89,5 @@ websocket-client==1.8.0
 whitenoise==6.8.2
 wsproto==1.2.0
 zope.interface==7.2
+mongoengine==0.29.1
+django-rest-framework-mongoengine==3.4.1

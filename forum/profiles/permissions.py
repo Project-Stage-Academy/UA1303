@@ -36,7 +36,7 @@ class AbstractRolePermission(BasePermission):
             raise AuthenticationFailed("Invalid or missing token")
 
         token_role_value = request.auth.get('role')
-        if not token_role_value or not token_role_value.isdigit():
+        if not token_role_value or not str(token_role_value).isdigit():
             raise AuthenticationFailed("Invalid role in token")
 
         return int(token_role_value) == self.role
