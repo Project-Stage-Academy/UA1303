@@ -18,7 +18,8 @@ class StartupProfile(models.Model):
         company_name (CharField): The name of the startup (max length: 200 characters).
         industry (CharField): The industry category of the startup (max length: 100 characters).
         size (CharField): The size of the startup (e.g., small, medium, large).
-        country (CharField): The country where the startup is located (max length: 50 characters).
+        country (CountryField): The country where the startup is located, 
+            represented as an ISO 3166-1 alpha-2 country code (e.g., "US" for the United States).
         city (CharField): The city where the startup is located (max length: 50 characters).
         zip_code (CharField): The postal code of the startup (max length: 20 characters).
         address (CharField): The physical address of the startup (max length: 250 characters, optional).
@@ -67,7 +68,8 @@ class InvestorProfile(models.Model):
 
     Attributes:
         user (OneToOneField): A one-to-one relationship with the User model.
-        country (CharField): The country of the investor (max length: 50 characters).
+        country (CountryField): The country where the investor is located, 
+            represented as an ISO 3166-1 alpha-2 country code (e.g., "US" for the United States). 
         city (CharField): The city of the investor (max length: 50 characters).
         zip_code (CharField): The postal code of the investor (max length: 20 characters).
         address (CharField): The physical address of the investor (max length: 250 characters, optional).
@@ -80,7 +82,7 @@ class InvestorProfile(models.Model):
         updated_at (DateTimeField): The date and time the profile was last updated.
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="investor_profile", db_index=True)
-    country = CountryField(default='UA')
+    country = CountryField()
     city = models.CharField(max_length=50)
     zip_code = models.CharField(max_length=20)
     address = models.CharField(max_length=250, blank=True, null=True)
