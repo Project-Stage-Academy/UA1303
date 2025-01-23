@@ -2,6 +2,7 @@ import random
 from operator import itemgetter
 
 import factory
+from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -23,21 +24,37 @@ class InvestorProfileTest(TestCase):
             email="testuser@example.com", password="securepassword"
         )
 
+        self.data = {
+            "user": self.user,
+            "company_name": "Test Company",
+            "industry": "Technology",
+            "size": "Small",
+            "country": "US",
+            "city": "San Francisco",
+            "zip_code": "94105",
+            "address": "123 Market St",
+            "phone": "+14155552671",
+            "email": "test@example.com",
+            "description": "A test startup in the tech industry.",
+            "is_public": True,
+        }
+
+
     def test_profile_creation(self):
         profile = InvestorProfile.objects.create(
             user=self.user,
-            country="Ukraine",
+            country="UA",
             phone="A test startup",
             email="testcase@gmail.com",
         )
 
-        self.assertEqual(profile.country, "Ukraine")
+        self.assertEqual(profile.country, "UA")
         self.assertEqual(profile.user, self.user)
 
     def test_profile_creation_invalid_email(self):
         data = {
             "user": self.user.user_id,
-            "country": "Ukraine",
+            "country": "UA",
             "phone": "+380991234567",
             "email": "invalid-email",
         }
@@ -50,13 +67,56 @@ class InvestorProfileTest(TestCase):
     def test_profile_creation_empty_email(self):
         data = {
             "user": self.user.user_id,
-            "country": "Ukraine",
+            "country": "UA",
             "phone": "+380991234567",
         }
 
         serializer = InvestorProfileSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertEqual(serializer.errors["email"][0], "This field is required.")
+
+    def create_and_validate_profile(self, **overrides):
+        """
+        Helper method to create and validate a profile with data overrides.
+        """
+        data = self.data.copy()
+        data.update(overrides)
+        profile = StartupProfile(**data)
+        profile.full_clean()  # Ensure validation
+        return profile
+
+    def test_valid_country_code(self):
+        """Test that a valid ISO country code is accepted."""
+        try:
+            profile = self.create_and_validate_profile(country="US")  # Valid code
+            profile.save()
+        except ValidationError:
+            self.fail("ValidationError was raised for a valid country code.")
+
+    def test_invalid_country_code(self):
+        """Test that invalid country codes raise a ValidationError."""
+        invalid_codes = [
+            "INVALID",  # Too long
+            "X1",       # Non-existent two-letter code
+            "",         # Empty string
+            None,       # Null value
+        ]
+        for code in invalid_codes:
+            with self.subTest(country=code):
+                with self.assertRaises(ValidationError):
+                    self.create_and_validate_profile(country=code)
+
+    def test_missing_country_code(self):
+        """Test that missing country code raises a ValidationError."""
+        with self.assertRaises(ValidationError):
+            self.create_and_validate_profile(country=None)
+
+    def test_valid_profile_saves_successfully(self):
+        """Test that a fully valid profile saves successfully."""
+        profile = self.create_and_validate_profile()
+        profile.save()
+        self.assertIsNotNone(profile.id)
+        self.assertEqual(profile.country, self.data["country"])
 
     def tearDown(self):
         del self.user
@@ -71,7 +131,7 @@ class InvestorProfileAPITest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.token}")
 
         self.data = {
-            "country": "Ukraine",
+            "country": "UA",
             "city": "Lviv",
             "zip_code": "79000",
             "address": "Shevchenka St. 25",
@@ -81,7 +141,7 @@ class InvestorProfileAPITest(APITestCase):
         }
 
         self.invalid_data = {
-            "country": "Ukraine",
+            "country": "UA",
             "city": "Lviv",
             "zip_code": "79000",
             "address": "Shevchenka St. 25",
@@ -91,7 +151,7 @@ class InvestorProfileAPITest(APITestCase):
         }
 
         self.missing_email_data = {
-            "country": "Ukraine",
+            "country": "UA",
             "city": "Lviv",
             "zip_code": "79000",
             "address": "Shevchenka St. 25",
@@ -100,7 +160,7 @@ class InvestorProfileAPITest(APITestCase):
         }
 
         self.missing_phone_data = {
-            "country": "Ukraine",
+            "country": "UA",
             "city": "Lviv",
             "zip_code": "79000",
             "address": "Shevchenka St. 25",
@@ -110,7 +170,7 @@ class InvestorProfileAPITest(APITestCase):
         }
 
         self.invalid_balance_data_smaller_balance = {
-            "country": "Ukraine",
+            "country": "UA",
             "city": "Lviv",
             "zip_code": "79000",
             "address": "Shevchenka St. 25",
@@ -119,7 +179,7 @@ class InvestorProfileAPITest(APITestCase):
         }
 
         self.invalid_phone_data = {
-            "country": "Ukraine",
+            "country": "UA",
             "city": "Lviv",
             "zip_code": "79000",
             "address": "Shevchenka St. 25",
@@ -129,7 +189,7 @@ class InvestorProfileAPITest(APITestCase):
         }
 
         self.invalid_balance_data_bigger_balance = {
-            "country": "Ukraine",
+            "country": "UA",
             "city": "Lviv",
             "zip_code": "79000",
             "address": "Shevchenka St. 25",
@@ -138,7 +198,7 @@ class InvestorProfileAPITest(APITestCase):
             "account_balance": 999999999 * 999999999,
         }
         self.valid_balance_data_big_balance = {
-            "country": "Ukraine",
+            "country": "UA",
             "city": "Lviv",
             "zip_code": "79000",
             "address": "Shevchenka St. 25",
@@ -148,7 +208,7 @@ class InvestorProfileAPITest(APITestCase):
         }
 
         self.invalid_zipcode = {
-            "country": "Ukraine",
+            "country": "UA",
             "city": "Lviv",
             "zip_code": "zip-code",
             "address": "Shevchenka St. 25",
@@ -165,12 +225,63 @@ class InvestorProfileAPITest(APITestCase):
     def test_create_investor_profile(self):
         response = self.create_profile(self.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["country"], self.data["country"])
         self.assertEqual(response.data["email"], self.data["email"])
+
+        self.assertIn("country", response.data)
+        self.assertIsInstance(response.data["country"], dict)
+
+        self.assertEqual(response.data["country"]["code"], self.data["country"])
+    
+    def test_create_profile_valid_country(self):
+        """Test creating a profile with a valid country code."""
+        response = self.create_profile(self.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["country"]["code"], self.data["country"])
+
 
     def test_invalid_create_investor_profile(self):
         response = self.create_profile(self.invalid_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_create_profile_invalid_country(self):
+        """Test creating a profile with invalid country codes."""
+        invalid_codes = [
+            "INVALID",  # Too long
+            "X1",       # Non-existent two-letter code
+            "",         # Empty string
+            None,       # Null value
+        ]
+        invalid_data = self.data.copy()
+        for code in invalid_codes:
+            with self.subTest(country=code):
+                invalid_data["country"] = code
+
+                response = self.create_profile(invalid_data)
+
+                # Ensure status is 400 Bad Request
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+                # Validate the error format
+                self.assertIn("country", response.data)
+                error_details = response.json()["country"]
+                self.assertIsInstance(error_details, list)
+
+                # Check the error message content
+                expected_message = f'"{code}" is not a valid choice.' if not code is None else "This field may not be null."
+                self.assertEqual(error_details[0], expected_message)
+
+    
+    def test_create_profile_missing_country(self):
+        """Test creating a profile without a country code."""
+        missing_country_data = self.data.copy()
+        missing_country_data.pop("country")  # Remove the country field
+
+        response = self.create_profile(missing_country_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("country", response.data)
+        self.assertEqual(response.data["country"][0], "This field is required.")
+
+
 
     def test_create_investor_profile_missing_email(self):
         response = self.create_profile(self.missing_email_data)
@@ -236,7 +347,7 @@ class InvestorProfileAPITest(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["city"], partial_update_data["city"])
-        self.assertEqual(response.data["country"], self.data["country"])
+        self.assertEqual(response.data["country"]["code"], self.data["country"])
 
     def test_delete_investor_profile(self):
         response = self.create_profile(self.data)
@@ -261,7 +372,7 @@ class InvestorProfileAPITest(APITestCase):
         response = self.create_profile(self.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["city"], self.data["city"])
-        self.assertEqual(response.data["country"], self.data["country"])
+        self.assertEqual(response.data["country"]["code"], self.data["country"])
         profile_id = response.data["id"]
 
         self.client.credentials()
@@ -274,7 +385,7 @@ class InvestorProfileAPITest(APITestCase):
         response = self.create_profile(self.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["city"], self.data["city"])
-        self.assertEqual(response.data["country"], self.data["country"])
+        self.assertEqual(response.data["country"]["code"], self.data["country"])
         profile_id = response.data["id"]
 
         self.client.credentials()
@@ -304,7 +415,7 @@ class InvestorProfileOwnershipTest(APITestCase):
         self.other_user_token = AccessToken.for_user(self.other_user)
 
         self.data = {
-            "country": "Ukraine",
+            "country": "UA",
             "city": "Lviv",
             "zip_code": "79000",
             "address": "Shevchenka St. 25",
@@ -362,7 +473,7 @@ class StartupProfileTestCase(APITestCase):
             company_name='SuperCompany',
             industry='transport',
             size='100',
-            country='USA',
+            country='US',
             city='Los Angeles',
             zip_code='2000',
             address='Some street 7',
@@ -389,7 +500,7 @@ class StartupProfileTestCase(APITestCase):
             "company_name": "Renamed company",
             "industry": "transport",
             "size": "100",
-            "country": "USA",
+            "country": "US",
             "city": "Los Angeles",
             "zip_code": "2000",
             "address": "Some street 6",
@@ -415,7 +526,7 @@ class StartupProfileTestCase(APITestCase):
             "company_name": "New company",
             "industry": "finance",
             "size": "200",
-            "country": "USA",
+            "country": "US",
             "city": "Washington",
             "zip_code": "2000",
             "address": "new street 16",
@@ -446,7 +557,7 @@ class StartupProfileTestCase(APITestCase):
             "company_name": "New company",
             "industry": "finance",
             "size": "200",
-            "country": "USA",
+            "country": "US",
             "city": "Washington",
             "zip_code": "2000",
             "address": "",
@@ -467,7 +578,7 @@ class StartupProfileTestCase(APITestCase):
             "company_name": "New company",
             "industry": "finance",
             "size": "200",
-            "country": "USA",
+            "country": "US",
             "city": "Washington",
             "zip_code": "2000",
             "address": "new street 16",
@@ -486,7 +597,7 @@ class StartupProfileTestCase(APITestCase):
             "company_name": "New company",
             "industry": "finance",
             "size": "200",
-            "country": "USA",
+            "country": "US",
             "city": "Washington",
             "zip_code": "2000",
             "address": "new street 16",
@@ -496,6 +607,46 @@ class StartupProfileTestCase(APITestCase):
         }
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, 400)
+    
+    def test_country_validation(self):
+        """Test country validation"""
+        url = reverse(f'{self.url}-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_user2}')
+        data = {
+            "company_name": "New company",
+            "industry": "finance",
+            "size": "200",
+            "country": "US",
+            "city": "Washington",
+            "zip_code": "2000",
+            "address": "new street 16",
+            "phone": "+380632225577",
+            "email": "use22222r@example.com",
+            "description": "Amazing company that should be created"
+        }
+
+        invalid_codes = [
+            "INVALID",  # Too long
+            "X1",       # Non-existent two-letter code
+            "",         # Empty string
+            None,       # Null value
+        ]
+
+        for code in invalid_codes:
+            with self.subTest(country=code):
+                data["country"] = code
+
+                response = self.client.post(url, data, format='json')
+                self.assertEqual(response.status_code, 400)
+
+                # Validate the error format
+                self.assertIn("country", response.data)
+                error_details = response.json()["country"]
+                self.assertIsInstance(error_details, list)
+
+                # Check the error message content
+                expected_message = f'"{code}" is not a valid choice.' if not code is None else "This field may not be null."
+                self.assertEqual(error_details[0], expected_message)
 
     def test_create_second_startup_profile(self):
         """Test that user1 can't create second profile"""
@@ -505,7 +656,7 @@ class StartupProfileTestCase(APITestCase):
             "company_name": "Second company",
             "industry": "finance",
             "size": "240",
-            "country": "USA",
+            "country": "US",
             "city": "Washington",
             "zip_code": "3000",
             "address": "new street 22",
@@ -524,7 +675,7 @@ class StartupProfileTestCase(APITestCase):
             "company_name": "Renamed company",
             "industry": "transport",
             "size": "100",
-            "country": "USA",
+            "country": "US",
             "city": "Los Angeles",
             "zip_code": "2000",
             "address": "Some street 6",
@@ -579,7 +730,7 @@ class SaveProfileTestCase(APITestCase):
             company_name='SuperCompany',
             industry='transport',
             size='100',
-            country='USA',
+            country='US',
             city='Los Angeles',
             zip_code='2000',
             address='Some street 7',
@@ -591,7 +742,7 @@ class SaveProfileTestCase(APITestCase):
         # Create Investor profile for user 2
         self.investor1 = InvestorProfile.objects.create(
             user=self.user2,
-            country="Ukraine",
+            country="UA",
             phone="+380631234455",
             email="testcase@gmail.com",
         )
@@ -682,7 +833,7 @@ class ListSavedProfilesTestCase(APITestCase):
         self.startup1_name = 'SuperCompany'
         self.startup1_industry = 'transport'
         self.startup1_size = '100'
-        self.startup1_country = 'United Kingdom'
+        self.startup1_country = 'GB'
         self.startup1_city = 'Los Angeles'
 
         # Creating users and their startup profiles
@@ -706,7 +857,7 @@ class ListSavedProfilesTestCase(APITestCase):
             company_name='Small Business',
             industry='tourism',
             size='200',
-            country='USA',
+            country='US',
             city='London',
             zip_code='E1 6AN',
             address='Some street 74',
@@ -719,7 +870,7 @@ class ListSavedProfilesTestCase(APITestCase):
         self.user3 = User.objects.create_user(password='password3', email='user3@email.com')
         self.investor = InvestorProfile.objects.create(
             user=self.user3,
-            country="Ukraine",
+            country="UA",
             phone="+380631234455",
             email="testca3se@gmail.com",
         )
@@ -759,7 +910,7 @@ class ListSavedProfilesTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), expected_count)
         for item in response.data:
-            self.assertIn(search_query, item[search_field])
+            self.assertIn(search_query, item[search_field] if search_field != "country" else item.get(search_field)["name"])
 
     def filter_and_assert(self, filter_queries: dict, expected_count: int):
         """Helper method to perform filter and assert results."""
@@ -773,7 +924,7 @@ class ListSavedProfilesTestCase(APITestCase):
         if expected_count > 0:
             for item in response.data:
                 for field, search_query in filter_queries.items():
-                    self.assertEqual(search_query, item.get(field))
+                    self.assertEqual(search_query, item.get(field) if field != "country" else item.get(field)["code"])
 
     def test_get_followed_startups_name_search(self):
         """Test search by name"""
@@ -789,7 +940,7 @@ class ListSavedProfilesTestCase(APITestCase):
 
     def test_get_followed_startups_country_search(self):
         """Test search by country"""
-        search_query = self.startup1_country[0:-2]
+        search_query = self.startup1.country.name[0:-2]
         search_field = 'country'
         self.search_and_assert(search_query, search_field, 1)
 
@@ -866,7 +1017,7 @@ class StartupProfileFactory(factory.django.DjangoModelFactory):
     company_name = factory.LazyAttribute(lambda _: faker.company())
     industry = factory.Iterator(['Technology', 'Environmental', 'Education', 'AI'])
     size = factory.Iterator(['Small', 'Medium', 'Large', 'Startup'])
-    country = factory.Iterator(['USA', 'Sweden', 'India', 'UK', 'Germany', 'France'])
+    country = factory.Iterator(['US', 'SE', 'IN', 'GB', 'DE', 'FR'])
     city = factory.LazyAttribute(lambda _: faker.city())
     zip_code = factory.LazyAttribute(lambda _: faker.zipcode())
     address = factory.LazyAttribute(lambda _: faker.address())
@@ -904,7 +1055,7 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
                 'Duplicate Name', 'Duplicate Name'
             ]),
             country=factory.Iterator([
-                'USA', 'USA', 'Canada', 'Canada', 'UK', 'UK', 'USA', 'Canada'
+                'US', 'US', 'CA', 'CA', 'GB', 'GB', 'US', 'CA'
             ]),
             city=factory.Iterator([
                 'New York', 'San Francisco', 'Toronto', 'Vancouver',
@@ -961,10 +1112,10 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
         """
         user_email = random.choice(self.users).email
         self.perform_request_and_validate(
-            query_params="?country=USA",
+            query_params="?country=US",
             token_email=user_email,
             validation_func=lambda data: self.assertTrue(
-                all('USA' in startup['country'] for startup in data)
+                all('US' == startup['country']['code'] for startup in data)
             )
         )
 
@@ -1014,10 +1165,10 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
         """
         user_email = random.choice(self.users).email
         self.perform_request_and_validate(
-            query_params="?country=USA&city=New York",
+            query_params="?country=US&city=New York",
             token_email=user_email,
             validation_func=lambda data: self.assertTrue(
-                all('USA' in startup['country'] for startup in data) and
+                all('US' == startup['country']['code'] for startup in data) and
                 all('New York' in startup['city'] for startup in data),
             )
         )
@@ -1054,13 +1205,13 @@ class StartupProfileFilterSearchSortTestCase(APITestCase):
         """
         Test searching by partial country
         """
-        partial_name = random.choice(self.startups).country[:3]
+        partial_name = random.choice(self.startups).country.name[:3]
         user_email = random.choice(self.users).email
         self.perform_request_and_validate(
             query_params=f"?search={partial_name}",
             token_email=user_email,
             validation_func=lambda data: self.assertTrue(
-                any(partial_name in startup['country'] for startup in data)
+                any(partial_name in startup['country']['name'] for startup in data)
             )
         )
 
