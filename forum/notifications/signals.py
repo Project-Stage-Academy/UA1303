@@ -8,29 +8,51 @@ from .serializers import (
 )
 from projects.models import Project
 import logging
+from django.db.models.signals import post_migrate
 
 
 logger = logging.getLogger(__name__)
 
-NOTIFICATION_CATEGORIES = {
-    'follow': None,
-    'profile_update': None,
-    'new_project': None
-}
+class NotificationPropertyManager:
+    _objects = None
 
-NOTIFICATION_METHODS = {
-    'in_app': None,
-    'email': None
-}
+    def __getitem__(self, key: str) -> object:
+        
+        if self._objects[key] is None:
+            self._initialize()
+        
+        return self._objects[key]
+    
+    @classmethod
+    def _initialize(cls) -> None:
+        ...
 
-def initialize_notification_categories_and_methods():
-    """Initialize notification categories and methods once at startup"""
-    for name in NOTIFICATION_CATEGORIES.keys():
-        NOTIFICATION_CATEGORIES[name] = NotificationCategory.objects.get(name=name)
-    for name in NOTIFICATION_METHODS.keys():
-        NOTIFICATION_METHODS[name] = NotificationMethod.objects.get(name=name)
 
-initialize_notification_categories_and_methods()
+class NotificationCategoriesManager(NotificationPropertyManager):
+    _objects = {
+        'follow': None,
+        'profile_update': None,
+        'new_project': None
+    }
+    @classmethod
+    def _initialize(cls):
+        for name in cls._objects:
+            cls._objects[name] = NotificationCategory.objects.get(name=name)
+
+
+class NotificationMethodsManager(NotificationPropertyManager):
+    _objects = {
+        'in_app': None,
+        'email': None
+    }
+    @classmethod
+    def _initialize(cls):
+        for name in cls._objects:
+            cls._objects[name] = NotificationMethod.objects.get(name=name)
+
+NOTIFICATION_CATEGORIES = NotificationCategoriesManager()
+
+NOTIFICATION_METHODS = NotificationMethodsManager()
 
 
 def have_preference(notification_receiver, notification_category):
@@ -73,6 +95,7 @@ def create_notification(notification_receiver, notification_category, data, seri
         data: Dictionary containing notification data
         serializer_class: Serializer class to use for validation and creation
     """
+
     if not have_preference(notification_receiver, notification_category):
         return False
     
