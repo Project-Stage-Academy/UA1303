@@ -2,7 +2,7 @@ import logging
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import exceptions, generics, status
+from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 ROLE_CATEGORIES = {
     Role.STARTUP: ["follow"],
-    Role.INVESTOR: ["update", "project"],
+    Role.INVESTOR: ["profile_update", "new_project"],
 }
 
 PREFERENCE_RESPONSES = {
@@ -228,26 +228,6 @@ class NotificationPreferenceView(APIView):
             f"Invalid data provided for user {request.user.email}: {serializer.errors}"
         )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @swagger_auto_schema(
-        operation_description="Deletes the current user's preference for both roles."
-    )
-    def delete(self, request):
-        preferences = NotificationPreference.objects.filter(user=request.user)
-        if preferences:
-            preferences.delete()
-            logger.info(f"Preferences deleted for user {request.user.email}")
-            return Response(
-                {"detail": "Notification preferences deleted successfully."},
-                status=status.HTTP_200_OK,
-            )
-        logger.warning(
-            f"Attempted to delete preferences for non-existent user {request.user.email}"
-        )
-        return Response(
-            {"detail": "Notification preferences not set."},
-            status=status.HTTP_404_NOT_FOUND,
-        )
 
 
 class NotificationListView(generics.ListAPIView):
@@ -447,3 +427,4 @@ class RoleLayer:
         new_categories += request.data["allowed_notification_categories"]
         current_data["allowed_notification_categories"] = new_categories
         return current_data
+    

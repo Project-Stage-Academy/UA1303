@@ -179,11 +179,3 @@ class InvestorNotificationCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return InvestorNotification.objects.create(**validated_data)
     
-    def validate(self, data):
-        if InvestorNotification.objects.filter(
-            notification_category=data['notification_category'],
-            investor=data['investor'],
-            startup=data['startup']
-        ).exists():
-            raise serializers.ValidationError("This notification already exists.")
-        return data

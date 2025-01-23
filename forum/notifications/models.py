@@ -111,7 +111,7 @@ class NotificationPreference(models.Model):
     """
 
     user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
+        User,
         on_delete=models.CASCADE,
         related_name="notification_preferences",
     )
@@ -236,12 +236,6 @@ class InvestorNotification(models.Model):
         verbose_name = "Investor Notification"
         verbose_name_plural = "Investor Notifications"
         ordering = ['id']
-        constraints = [
-            models.UniqueConstraint(
-                fields=['notification_category', 'investor', 'startup'],
-                name='unique_investor_notification'
-            )
-        ]
 
     def mark_as_read(self):
         if not self.is_read:
@@ -254,3 +248,4 @@ class InvestorNotification(models.Model):
         Mark all unread notifications for a specific user as read.
         """
         cls.objects.unread().for_investor(user.investor_profile).update(is_read=True)
+        
