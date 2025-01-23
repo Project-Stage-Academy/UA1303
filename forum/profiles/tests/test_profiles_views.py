@@ -12,6 +12,7 @@ from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 from profiles.models import InvestorProfile, StartupProfile
 from profiles.serializers import InvestorProfileSerializer
+from users.serializers import create_default_notification_preferences
 
 faker = Faker()
 User = get_user_model()
@@ -351,6 +352,8 @@ class StartupProfileTestCase(APITestCase):
         # Creating users. User1 is startup owner.
         self.user1 = User.objects.create_user(password='password1', email='user1@email.com')
         self.user2 = User.objects.create_user(password='password2', email='user2@email.com')
+        create_default_notification_preferences(self.user1)
+        create_default_notification_preferences(self.user2)
 
         # Create tokens for authorization
         self.token_user1 = self.get_jwt_token(self.user1)
@@ -568,6 +571,8 @@ class SaveProfileTestCase(APITestCase):
         # Creating users. User1 is startup owner. User 2 is investor
         self.user1 = User.objects.create_user(password='password1', email='user1@email.com')
         self.user2 = User.objects.create_user(password='password2', email='user2@email.com')
+        create_default_notification_preferences(self.user1)
+        create_default_notification_preferences(self.user2)
 
         # Create tokens for authorization
         self.token_user1 = self.get_jwt_token(self.user1)
