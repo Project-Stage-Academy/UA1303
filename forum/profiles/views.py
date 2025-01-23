@@ -110,7 +110,7 @@ class StartupProfileViewSet(ModelViewSet):
     serializer_class = StartupProfileSerializer
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ['company_name', 'industry', 'country__name', 'city',]
+    search_fields = ['company_name', 'industry', 'country', 'city', ]
     filterset_fields = ['industry', 'country', 'city', 'size']
     ordering_fields = ['company_name', 'created_at']
 
@@ -153,7 +153,7 @@ class SaveStartupViewSet(ListModelMixin, GenericViewSet):
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
 
-    search_fields = ['company_name', 'industry', 'country__name', 'city']
+    search_fields = ['company_name', 'industry', 'country', 'city']
     filterset_fields = ['industry', 'country', 'city', 'size']
     ordering_fields = ['company_name', 'created_at']
 
