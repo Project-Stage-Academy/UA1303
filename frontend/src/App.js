@@ -55,11 +55,3 @@ function App() {
 }
 
 export default App;
-
-
-
-// <Route path="/" element={<Home />} />
-// <Route path="/login/" element={<LoginPage />} />
-// <Route path="/my_profile/" element={<ProfilePage />} />
-// <Route path="/oauth2callback/" element={<OAuthCallback />} />
-// <Route path="/choose_role/" element = {<ChooseRole />} />
