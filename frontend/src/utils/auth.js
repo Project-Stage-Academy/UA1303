@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_BASE_URL, ENDPOINTS } from '../api/config';
+import { getRoleName } from './roles';
 
 const getCookie = (name) => {
     return document.cookie
@@ -68,3 +69,20 @@ export const refreshToken = async () => {
         return Promise.reject(new Error('Failed to refresh token.'));
     }
 };
+
+export const getAuthStatus = () => {
+    const accessToken = getAccessToken();
+    const refreshToken = getRefreshToken();
+    if (!accessToken && !refreshToken) {
+        return { isAuthenticated: false, role: null };
+    }
+    const token = accessToken || refreshToken;
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1])); // Decode JWT payload
+        const role = getRoleName(payload.role); // Convert role into human-readable format
+        return { isAuthenticated: true, role };
+    } catch (error) {
+        console.error('Failed to parse token payload:', error);
+        return { isAuthenticated: false, role: null };
+    }
+  };
