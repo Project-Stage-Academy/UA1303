@@ -229,26 +229,6 @@ class NotificationPreferenceView(APIView):
         )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @swagger_auto_schema(
-        operation_description="Deletes the current user's preference for both roles."
-    )
-    def delete(self, request):
-        preferences = NotificationPreference.objects.filter(user=request.user)
-        if preferences:
-            preferences.delete()
-            logger.info(f"Preferences deleted for user {request.user.email}")
-            return Response(
-                {"detail": "Notification preferences deleted successfully."},
-                status=status.HTTP_200_OK,
-            )
-        logger.warning(
-            f"Attempted to delete preferences for non-existent user {request.user.email}"
-        )
-        return Response(
-            {"detail": "Notification preferences not set."},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
 
 class NotificationListView(generics.ListAPIView):
     """
