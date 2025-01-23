@@ -13,4 +13,6 @@ export const ENDPOINTS = {
     CONVERT_TOKEN: `${API_HOST_URL}auth/convert-token`,
     GITHUB_TOKEN: `auth/github-token/`,
     CHANGE_ROLE: `auth/change-role/`,
+
+    STARTUP_LIST: `profiles/startup-profile/`,
 }

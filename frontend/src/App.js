@@ -8,6 +8,7 @@ import OAuthCallback from './pages/socialauth-callback/socialauth-callback';
 import ChooseRole from './pages/choose-role/choose-role';
 import Home from './pages/home/home';
 import UnauthorizedPage from './pages/unauthorized/unauthorized';
+import StartupsListPage from './pages/startups-list/startups-list';
 
 
 
@@ -36,6 +37,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['startup', 'investor']}>
                 <ChooseRole />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/startups/"
+            element ={
+              <ProtectedRoute allowedRoles={['investor']}>
+                <StartupsListPage />
               </ProtectedRoute>
             }
           />
