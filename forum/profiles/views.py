@@ -38,6 +38,67 @@ class InvestorViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+    
+    @swagger_auto_schema(
+    request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=["country", "email"],  # Specify required fields
+            properties={
+                "country": openapi.Schema(
+                    type=openapi.TYPE_OBJECT,  # Because `country_dict=True`
+                    description=(
+                        "Country input can be either:\n"
+                        "- A two-letter country code (ISO 3166-1 alpha-2, e.g., 'US')\n"
+                        "- A dictionary with 'code' and 'name' (e.g., {'code': 'US', 'name': 'United States'})"
+                    ),
+                    example="US",
+                ),
+                "city": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="City name.",
+                    example="San Francisco",
+                ),
+                "zip_code": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="Postal code (must include at least one numeric character).",
+                    example="94105",
+                ),
+                "address": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="Street address.",
+                    example="123 Market Street",
+                ),
+                "phone": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="Phone number (optional).",
+                    example="+1 415-555-0123",
+                    nullable=True,
+                ),
+                "email": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format="email",
+                    description="Email address (must be unique).",
+                    example="investor@example.com",
+                ),
+                "account_balance": openapi.Schema(
+                    type=openapi.TYPE_NUMBER,
+                    description=(
+                        "Account balance in USD. Must be positive and less than "
+                        "9,999,999,999,999.99."
+                    ),
+                    example=50000.00,
+                    minimum=0,
+                    maximum=9_999_999_999_999.99,
+                ),
+            },
+        ),
+        responses={
+            201: openapi.Response("Investor profile created successfully."),
+            400: openapi.Response("Validation error."),
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
 
 
 class StartupProfileViewSet(ModelViewSet):
@@ -49,7 +110,7 @@ class StartupProfileViewSet(ModelViewSet):
     serializer_class = StartupProfileSerializer
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ['company_name', 'industry', 'country', 'city']
+    search_fields = ['company_name', 'industry', 'country__name', 'city',]
     filterset_fields = ['industry', 'country', 'city', 'size']
     ordering_fields = ['company_name', 'created_at']
 
@@ -92,7 +153,7 @@ class SaveStartupViewSet(ListModelMixin, GenericViewSet):
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
 
-    search_fields = ['company_name', 'industry', 'country', 'city']
+    search_fields = ['company_name', 'industry', 'country__name', 'city']
     filterset_fields = ['industry', 'country', 'city', 'size']
     ordering_fields = ['company_name', 'created_at']
 
