@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: forum-app
+  template:
+    metadata:
+      labels:
+        app: forum-app
+    spec:
+      containers:
+      - name: forum-app
+        image: docker.io/basiljaworski/forum-app:fix8
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - secretRef:
+            name: secret-env

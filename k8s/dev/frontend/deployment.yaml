@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: forum-frontend
+  template:
+    metadata:
+      labels:
+        app: forum-frontend
+    spec:
+      containers:
+      - name: forum-frontend
+        image: basiljaworski/forum-frontend:stable
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - secretRef:
+            name: secret-env
