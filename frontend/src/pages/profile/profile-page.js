@@ -3,11 +3,28 @@ import { useNavigate } from 'react-router-dom';
 import { ENDPOINTS } from '../../api/config';
 import axiosInstance from '../../api/axios-instance';
 import './profile-page.css';
+import Button from '../../components/button/button';
+import { getRefreshToken, cleanTokens } from '../../utils/auth';
 
 const ProfilePage = () => {
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+
+  const refreshToken = getRefreshToken();
+  const payload = {
+    'refresh': refreshToken
+  };
+
+  const handleLogout = async () => {
+    try {
+      await axiosInstance.post(ENDPOINTS.LOGOUT, payload);
+      cleanTokens();
+      navigate('/');
+    } catch (err) {
+      setError('Logout failed: ' + err.message);
+    }
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -44,6 +61,11 @@ const ProfilePage = () => {
       <p><strong>Title:</strong> {profile.title}</p>
       <p><strong>Created At:</strong> {new Date(profile.created_at).toLocaleString()}</p>
       <p><strong>Updated At:</strong> {new Date(profile.updated_at).toLocaleString()}</p>
+      <Button 
+        text="Logout" 
+        onClick={handleLogout}
+        variant="defualt"
+      />
     </div>
   );
 };

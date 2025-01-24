@@ -38,6 +38,14 @@ export const setRefreshToken = (refreshToken) => {
     document.cookie = `refreshToken=${refreshToken}; path=/; max-age=86400; Secure; SameSite=Strict`;
 };
 
+export const cleanTokens = () => {
+    document.cookie = 'accessToken=; path=/; max-age=0; Secure; SameSite=Strict';
+    localStorage.removeItem('access_token');
+    
+    document.cookie = 'refreshToken=; path=/; max-age=0; Secure; SameSite=Strict';
+    localStorage.removeItem('refresh_token');
+};
+
 export const refreshToken = async () => {
     const refreshToken = getRefreshToken();
   
@@ -73,6 +81,11 @@ export const refreshToken = async () => {
 export const getAuthStatus = () => {
     const accessToken = getAccessToken();
     const refreshToken = getRefreshToken();
+    if (refreshToken && isTokenExpired(refreshToken)) {
+        cleanTokens()
+        return { isAuthenticated: false, role: null };
+    }
+    
     if (!accessToken && !refreshToken) {
         return { isAuthenticated: false, role: null };
     }
