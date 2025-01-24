@@ -1,8 +1,8 @@
 from rest_framework import status
 from rest_framework.test import APITestCase
-from ..models import InvestorNotification
+from ..models import InvestorNotification, NotificationPreference
 from ..serializers import InvestorNotificationReadSerializer, InvestorNotificationCreateSerializer
-from ..factories import InvestorNotificationFactory, NotificationCategoryFactory, InvestorProfileFactory, StartupProfileFactory, UserFactory
+from ..factories import InvestorNotificationFactory, NotificationCategoryFactory, InvestorProfileFactory, StartupProfileFactory, UserFactory, ProjectFactory
 from django.urls import reverse
 from django.test import RequestFactory
 from unittest.mock import patch
@@ -468,22 +468,22 @@ class ProjectUpdateNotificationSignalTests(APITestCase):
         cls.startup = StartupProfileFactory()
 
         # Create a project owned by the startup
-        cls.project = Project.objects.create(
-            startup=cls.startup,
-            title="Test Project",
-            funding_goal=10000.00,
-            is_published=True,
-            is_completed=False,
-        )
+        cls.project = ProjectFactory(startup=cls.startup)
 
         # Add the investor as a follower of the startup
-        cls.project.startup.followers.add(cls.investor)
+        cls.startup.followers.add(cls.investor)
 
         # Create the "Project Update" notification category
         cls.project_update_category = NotificationCategory.objects.create(
             name="Project Update",
             description="Notifications about updates to project information.",
         )
+
+        # Create a notification preference for the investor
+        NotificationPreference.objects.create(
+            user=cls.investor.user,
+        )
+        cls.investor.user.notification_preferences.allowed_notification_categories.add(cls.project_update_category)
 
     def setUp(self):
         """
@@ -513,8 +513,6 @@ class ProjectUpdateNotificationSignalTests(APITestCase):
             startup=self.startup,
             notification_category=self.project_update_category,
         )
-        for notification in notifications:
-            print(f"Notification ID: {notification.id}, Investor ID: {notification.investor.id}, Startup ID: {notification.startup.id}, Category ID: {notification.notification_category.id}")
         self.assertEqual(notifications.count(), 1)
         self.assertEqual(notifications.first().notification_category.name, "Project Update")
         self.assertFalse(notifications.first().is_read)

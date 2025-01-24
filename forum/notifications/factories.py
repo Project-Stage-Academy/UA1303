@@ -82,7 +82,7 @@ class ProjectFactory(DjangoModelFactory):
         model = Project
 
     startup = factory.SubFactory(StartupProfileFactory)
-    title = factory.Faker('unique.sentence', nb_words=4)
+    title = factory.Faker('sentence', nb_words=4)
     funding_goal = factory.Faker('pydecimal', left_digits=6, right_digits=2, positive=True)
     is_published = True
     is_completed = False
