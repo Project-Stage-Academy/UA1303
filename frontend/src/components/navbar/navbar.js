@@ -1,7 +1,7 @@
 import './navbar.css';
 
 import { useNavigate } from 'react-router-dom';
-import { getAuthStatus } from '../../utils/auth';
+import { getAuthStatus, handleLogout } from '../../utils/auth';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -14,10 +14,20 @@ const Navbar = () => {
     links.push({ name: 'Login', path: '/login/' });
   } else if (role === 'startup') {
     links.push({ name: 'My Profile', path: '/my_profile/' });
+    links.push({ 
+      name : 'Logout',
+      action: () => handleLogout(navigate),
+      icon: 'fa-solid fa-right-from-bracket'  // Add Font Awesome icon class
+    });
     // Add message inbox in the future
   } else if (role === 'investor') {
     links.push({ name: 'My Profile', path: '/my_profile/' });
     links.push({ name: 'Startups', path: '/startups/' });
+    links.push({ 
+      name : 'Logout',
+      action: () => handleLogout(navigate),
+      icon: 'fa-solid fa-right-from-bracket'  // Add Font Awesome icon class
+    });
   }
 
   return (
@@ -28,7 +38,14 @@ const Navbar = () => {
       <ul className="navbar-menu">
         {links.map((link) => (
           <li key={link.name}>
-            <a href={link.path}>{link.name}</a>
+            {link.path ? (
+              <a href={link.path}>{link.name}</a>
+            ) : (
+            <button onClick={link.action} className="navbar-logout-button" title="Logout">
+              <i className={link.icon}></i>
+              {link.name && <span>{link.name}</span>}
+            </button>
+            )}
           </li>
         ))}
       </ul>

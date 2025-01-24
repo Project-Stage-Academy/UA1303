@@ -28,3 +28,25 @@
 .navbar-menu li a:hover {
   color: #007bff;
 }
+
+.navbar-logout-button {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.navbar-logout-button:hover {
+  text-decoration: none;
+  color: #007bff;
+}
+
+.navbar-logout-button i {
+  font-size: 1rem;
+}

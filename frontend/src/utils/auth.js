@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { API_BASE_URL, ENDPOINTS } from '../api/config';
 import { getRoleName } from './roles';
+import axiosInstance from '../api/axios-instance';
+
 
 const getCookie = (name) => {
     return document.cookie
@@ -17,6 +19,18 @@ const isTokenExpired = (token) => {
         return payload.exp * 1000 < Date.now();
     } catch {
         return true; // Invalid token
+    }
+};
+
+export const handleLogout = async (navigate) => {
+    try {
+      const refreshToken = getRefreshToken();
+      const payload = { 'refresh': refreshToken };
+      await axiosInstance.post(ENDPOINTS.LOGOUT, payload);
+      cleanTokens();
+      navigate('/');
+    } catch (err) {
+      console.error('Logout failed:', err);
     }
 };
 
