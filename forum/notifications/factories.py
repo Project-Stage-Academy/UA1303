@@ -74,7 +74,6 @@ class InvestorNotificationFactory(DjangoModelFactory):
     startup = factory.SubFactory(StartupProfileFactory)
     is_read = False
 
-    @factory.lazy_attribute
     def startup(self):
         return StartupProfileFactory()
 
@@ -83,10 +82,16 @@ class ProjectFactory(DjangoModelFactory):
         model = Project
 
     startup = factory.SubFactory(StartupProfileFactory)
-    title = factory.Faker('sentence', nb_words=4)
+    title = factory.Faker('unique.sentence', nb_words=4)
     funding_goal = factory.Faker('pydecimal', left_digits=6, right_digits=2, positive=True)
     is_published = True
     is_completed = False
+
+    @factory.post_generation
+    def set_completed(self, create, extracted, **kwargs):
+        if extracted:
+            self.is_completed = True
+            self.save()
 
 class InvestmentFactory(DjangoModelFactory):
     class Meta:
@@ -95,3 +100,9 @@ class InvestmentFactory(DjangoModelFactory):
     investor = factory.SubFactory(InvestorProfileFactory)
     project = factory.SubFactory(ProjectFactory)
     share = factory.Faker('pydecimal', left_digits=5, right_digits=2, positive=True)
+
+    @factory.post_generation
+    def ensure_project_published(self, create, extracted, **kwargs):
+        if self.project and not self.project.is_published:
+            self.project.is_published = True
+            self.project.save()
