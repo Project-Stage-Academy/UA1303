@@ -2,7 +2,7 @@ import logging
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import exceptions, generics, status
+from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,22 +13,29 @@ from .models import (
     NotificationMethod,
     NotificationPreference,
     StartUpNotification,
+    InvestorNotification,
 )
 from .paginations import StandardResultsSetPagination
-from .permissions import HasStartupAccessPermission, HasStartupProfilePermission
+from .permissions import (
+    HasStartupProfilePermission,
+    HasStartupAccessPermission,
+    HasInvestorProfilePermission,
+    HasInvestorAccessPermission,
+)
 from .serializers import (
     NotificationCategorySerializer,
     NotificationMethodSerializer,
     NotificationPreferenceSerializer,
     NotificationPreferenceUpdateSerializer,
     StartUpNotificationReadSerializer,
+    InvestorNotificationReadSerializer,
 )
 
 logger = logging.getLogger(__name__)
 
 ROLE_CATEGORIES = {
     Role.STARTUP: ["follow"],
-    Role.INVESTOR: ["update", "project"],
+    Role.INVESTOR: ["profile_update", "new_project"],
 }
 
 PREFERENCE_RESPONSES = {
@@ -222,26 +229,6 @@ class NotificationPreferenceView(APIView):
         )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @swagger_auto_schema(
-        operation_description="Deletes the current user's preference for both roles."
-    )
-    def delete(self, request):
-        preferences = NotificationPreference.objects.filter(user=request.user)
-        if preferences:
-            preferences.delete()
-            logger.info(f"Preferences deleted for user {request.user.email}")
-            return Response(
-                {"detail": "Notification preferences deleted successfully."},
-                status=status.HTTP_200_OK,
-            )
-        logger.warning(
-            f"Attempted to delete preferences for non-existent user {request.user.email}"
-        )
-        return Response(
-            {"detail": "Notification preferences not set."},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
 
 class NotificationListView(generics.ListAPIView):
     """
@@ -266,7 +253,7 @@ class NotificationListView(generics.ListAPIView):
 
 class NotificationDetailView(generics.RetrieveAPIView):
     """
-    To get a single notification and set 'is_read' to True
+    To get a single notification.
     """
 
     permission_classes = [
@@ -278,11 +265,64 @@ class NotificationDetailView(generics.RetrieveAPIView):
     serializer_class = StartUpNotificationReadSerializer
     lookup_field = "id"
 
-    def get_object(self):
-        notification = super().get_object()
-        notification.mark_as_read()
-        return notification
+    def patch(self, request, *args, **kwargs):
+        """
+        Mark a notification as read.
+        """
+        instance = self.get_object()
+        if not instance.is_read:
+            instance.is_read = True
+            instance.save()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+    
+    def get_serializer_context(self):
+        return {'request': self.request}
+    
 
+class InvestorNotificationListView(generics.ListAPIView):
+    """
+    To get all notifications as a list of dicts
+    """
+    permission_classes = [IsAuthenticated, HasInvestorProfilePermission]
+    pagination_class = StandardResultsSetPagination
+    serializer_class = InvestorNotificationReadSerializer
+
+    def get_queryset(self):
+        investor_id = self.request.user.investor_profile.id
+        queryset = InvestorNotification.objects.filter(investor_id=investor_id).order_by('id').select_related('notification_category', 'investor', 'startup')
+        
+        # Apply notification_category filter if provided
+        notification_category_id = self.request.query_params.get('notification_category')
+        if notification_category_id:
+            queryset = queryset.filter(notification_category_id=notification_category_id)
+        
+        return queryset
+
+    def get_serializer_context(self):
+        return {'request': self.request}
+
+
+class InvestorNotificationDetailView(generics.RetrieveAPIView):
+    """
+    To get a single notification.
+    """
+    permission_classes = [IsAuthenticated, HasInvestorProfilePermission, HasInvestorAccessPermission]
+    queryset = InvestorNotification.objects.all()
+    serializer_class = InvestorNotificationReadSerializer
+    lookup_field = 'id'
+
+    def patch(self, request, *args, **kwargs):
+        """
+        Mark a notification as read.
+        """
+        instance = self.get_object()
+        if not instance.is_read:
+            instance.is_read = True
+            instance.save()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+    
     def get_serializer_context(self):
         return {"request": self.request}
 
@@ -387,3 +427,4 @@ class RoleLayer:
         new_categories += request.data["allowed_notification_categories"]
         current_data["allowed_notification_categories"] = new_categories
         return current_data
+    

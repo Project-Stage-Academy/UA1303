@@ -5,10 +5,10 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django_ratelimit.decorators import ratelimit
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import status, viewsets
+from projects.models import Project
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.generics import ListAPIView
 from rest_framework.mixins import ListModelMixin
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
@@ -16,12 +16,10 @@ from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from .models import InvestorProfile, StartupProfile, ViewedStratups
-from .permissions import IsOwnerOrReadOnly
+from .permissions import IsOwnerOrReadOnly, IsStartup, IsInvestor
 from .serializers import (InvestorProfileSerializer, StartupProfileSerializer,
                           PublicStartupProfileSerializer, ViewedStratupCreateSerializer, 
                           ViewedStratupReadSerializer)
-from projects.models import Project
-from users.permissions import IsInvestor
 from users.models import Role
 
 
@@ -31,7 +29,7 @@ class InvestorViewSet(ModelViewSet):
     """
     queryset = InvestorProfile.objects.all()
     serializer_class = InvestorProfileSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly, IsInvestor]
 
     def get_queryset(self):
         if self.request.user.is_authenticated:
@@ -43,12 +41,18 @@ class InvestorViewSet(ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+    def list(self, request, *args, **kwargs):
+        """
+        Handles GET requests for listing investor profiles.
+        """
+        return super().list(request, *args, **kwargs)
+
 
 class StartupProfileViewSet(ModelViewSet):
     """
     API Endpoint for Startup Profiles
     """
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly, IsStartup]
     queryset = StartupProfile.objects.all().order_by('company_name', 'created_at')
     serializer_class = StartupProfileSerializer
 

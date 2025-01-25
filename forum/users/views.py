@@ -1,10 +1,19 @@
+import logging
 import os
-import requests
+
 from django.conf import settings
+from django.http import JsonResponse
 from django_ratelimit.decorators import ratelimit
+from djoser.views import UserViewSet
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
+from forum import settings
+from rest_framework import status
 from rest_framework.decorators import api_view
-from rest_framework.views import APIView
+from rest_framework.exceptions import APIException
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import APIException
@@ -20,13 +29,10 @@ from .serializers import (
     RoleSerializer,
     GithubAccessTokenSerializer
 )
+
 from .models import Role
-
-from django_ratelimit.decorators import ratelimit
-from django.http import JsonResponse
-
-import logging
-from forum import settings
+from .serializers import PasswordResetSerializer, LogoutSerializer, CustomUserSerializer
+from .utils import verify_captcha
 
 RATE_LIMIT_KEY = os.getenv("RATE_LIMIT_KEY", "ip")
 RATE_LIMIT_RATE = os.getenv("RATE_LIMIT_RATE", "5/m")
@@ -135,28 +141,28 @@ class LogoutView(APIView):
     )
     def post(self, request):
         serializer = LogoutSerializer(data=request.data, context={'request': request})
-        
+
         if not serializer.is_valid():
             logger.error(f"Validation error: {serializer.errors},  Request Data: {request.data}")
             return Response({"error": "Access denied."}, status=400)
-        
+
         refresh_token = serializer.validated_data['refresh']
 
         try:
             token = RefreshToken(refresh_token)
             token.blacklist()
-            
+
             logger.info("User logged out successfully.")
 
             return Response({"detail": "Logged out successfully."}, status=200)
         except Exception as e:
-            logger.error(f"Unexpected error occurred: {e}")       
+            logger.error(f"Unexpected error occurred: {e}")
             return Response({"error": "Access denied."}, status=403)
 
-   
+
 class RegisterUserView(APIView):
     """
-    View for user registration.
+    View for user registration
     """
 
     permission_classes = [AllowAny]

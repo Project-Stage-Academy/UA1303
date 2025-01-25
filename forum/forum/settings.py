@@ -13,8 +13,10 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 import os
 from datetime import timedelta
 from pathlib import Path
+
 import environ
 from dotenv import load_dotenv
+from mongoengine import connect
 
 load_dotenv()
 env = environ.Env()
@@ -100,9 +102,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "forum.wsgi.application"
 
-
 AUTH_USER_MODEL = "users.CustomUser"
-
 
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
@@ -124,6 +124,17 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT"),
     }
 }
+
+# Connect to MongoDB
+MONGO_HOST = os.getenv('MONGO_HOST')
+MONGO_PORT = os.getenv('MONGO_PORT')
+
+connect(
+    db=os.getenv('MONGO_DB_NAME'),
+    username=os.getenv('MONGO_INITDB_ROOT_USERNAME'),
+    password=os.getenv('MONGO_INITDB_ROOT_PASSWORD'),
+    host=f"mongodb://{MONGO_HOST}:{MONGO_PORT}/"
+)
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
@@ -195,7 +206,6 @@ SECURE_HSTS_SECONDS = 3600
 
 SECURE_SSL_REDIRECT = os.getenv("DJANGO_SECURE_SSL_REDIRECT", "True") == "True"
 
-
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 
 try:
@@ -245,6 +255,7 @@ LOGGING = {
         "django": {
             "handlers": ["console", "forum_file"],
             "level": "WARNING",
+            "propagate": False,
         },
         "django.db.backends": {
             "handlers": ["console", "database_file"],
@@ -289,10 +300,8 @@ SIMPLE_JWT = {
     'USER_ID_FIELD': 'user_id'
 }
 
-
 RECAPTCHA_PUBLIC_KEY = env("RECAPTCHA_PUBLIC_KEY")
 RECAPTCHA_PRIVATE_KEY = env("RECAPTCHA_PRIVATE_KEY")
-
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = env("EMAIL_HOST")
@@ -319,7 +328,6 @@ SWAGGER_SETTINGS = {
     },
     "USE_SESSION_AUTH": False,
 }
-
 
 # Daphne
 ASGI_APPLICATION = "forum.asgi.application"

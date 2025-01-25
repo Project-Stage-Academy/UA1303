@@ -6,12 +6,13 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from faker import Faker
+from profiles.models import InvestorProfile, StartupProfile
+from profiles.serializers import InvestorProfileSerializer
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
-
-from profiles.models import InvestorProfile, StartupProfile
-from profiles.serializers import InvestorProfileSerializer
+from users.models import Role
+from users.serializers import create_default_notification_preferences
 
 faker = Faker()
 User = get_user_model()
@@ -68,6 +69,7 @@ class InvestorProfileAPITest(APITestCase):
             email="testuser@example.com", password="securepassword"
         )
         self.token = AccessToken.for_user(self.user)
+        self.token['role'] = Role.INVESTOR.value
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.token}")
 
         self.data = {
@@ -297,11 +299,13 @@ class InvestorProfileOwnershipTest(APITestCase):
             email="owner@example.com", password="securepassword"
         )
         self.owner_token = AccessToken.for_user(self.owner)
+        self.owner_token['role'] = Role.INVESTOR.value
 
         self.other_user = User.objects.create_user(
             email="otheruser@example.com", password="securepassword"
         )
         self.other_user_token = AccessToken.for_user(self.other_user)
+        self.other_user_token['role'] = Role.INVESTOR.value
 
         self.data = {
             "country": "Ukraine",
@@ -344,17 +348,18 @@ class InvestorProfileOwnershipTest(APITestCase):
 
 
 class StartupProfileTestCase(APITestCase):
-
     url = 'profiles:startup-profile'
 
     def setUp(self):
         # Creating users. User1 is startup owner.
         self.user1 = User.objects.create_user(password='password1', email='user1@email.com')
         self.user2 = User.objects.create_user(password='password2', email='user2@email.com')
+        create_default_notification_preferences(self.user1)
+        create_default_notification_preferences(self.user2)
 
         # Create tokens for authorization
-        self.token_user1 = self.get_jwt_token(self.user1)
-        self.token_user2 = self.get_jwt_token(self.user2)
+        self.token_user1 = self.get_jwt_token(self.user1, Role.STARTUP.value)
+        self.token_user2 = self.get_jwt_token(self.user2, Role.STARTUP.value)
 
         # Create profile for user1
         self.startup1 = StartupProfile.objects.create(
@@ -371,9 +376,10 @@ class StartupProfileTestCase(APITestCase):
             description='Some description',
         )
 
-    def get_jwt_token(self, user):
+    def get_jwt_token(self, user, role):
         """Helper method to create a JWT token for a user."""
         refresh = RefreshToken.for_user(user)
+        refresh['role'] = role
         return str(refresh.access_token)
 
     def test_anonymous_get_startup_request(self):
@@ -568,6 +574,8 @@ class SaveProfileTestCase(APITestCase):
         # Creating users. User1 is startup owner. User 2 is investor
         self.user1 = User.objects.create_user(password='password1', email='user1@email.com')
         self.user2 = User.objects.create_user(password='password2', email='user2@email.com')
+        create_default_notification_preferences(self.user1)
+        create_default_notification_preferences(self.user2)
 
         # Create tokens for authorization
         self.token_user1 = self.get_jwt_token(self.user1)

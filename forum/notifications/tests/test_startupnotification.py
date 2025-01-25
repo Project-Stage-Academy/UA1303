@@ -138,7 +138,7 @@ class NotificationAPITests(APITestCase):
         self.client.force_authenticate(user=self.user)
 
     def test_notification_list_api(self):
-        url = reverse('notifications:notifications')
+        url = reverse('notifications:startup_notifications')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
@@ -150,14 +150,14 @@ class NotificationAPITests(APITestCase):
                 investor=InvestorProfileFactory(),
                 startup=self.startup,
             )
-        url = reverse('notifications:notifications')
+        url = reverse('notifications:startup_notifications')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertLessEqual(len(response.data['results']), 10)
 
     def test_notification_detail_api_set_is_read(self):
-        url = reverse('notifications:notification_detail', args=[self.notification.id])
-        response = self.client.get(url, format='json')
+        url = reverse('notifications:startup_notification_detail', args=[self.notification.id])
+        response = self.client.patch(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.notification.refresh_from_db()
         self.assertTrue(self.notification.is_read)
@@ -169,11 +169,11 @@ class NotificationAPITests(APITestCase):
             investor=self.investor,
             startup=other_startup,
         )
-        url = reverse('notifications:notification_detail', args=[other_notification.id])
+        url = reverse('notifications:startup_notification_detail', args=[other_notification.id])
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_notification_detail_api_notification_not_found(self):
-        url = reverse('notifications:notification_detail', args=[999])
+        url = reverse('notifications:startup_notification_detail', args=[999])
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

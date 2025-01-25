@@ -4,7 +4,9 @@ from .views import (
     NotificationCategoryView,
     NotificationPreferenceView,
     NotificationListView, 
-    NotificationDetailView
+    NotificationDetailView,
+    InvestorNotificationDetailView,
+    InvestorNotificationListView
 )
 
 app_name = "notifications"
@@ -25,6 +27,8 @@ urlpatterns = [
         NotificationPreferenceView.as_view(),
         name="user_notification_preferences",
     ),
-    path('startup/', NotificationListView.as_view(), name='notifications'),
-    path('startup/<int:id>/', NotificationDetailView.as_view(), name='notification_detail'),
+    path('startup/', NotificationListView.as_view(), name='startup_notifications'),
+    path('startup/<int:id>/', NotificationDetailView.as_view(), name='startup_notification_detail'),
+    path('investor/', InvestorNotificationListView.as_view(), name='investor_notifications'),
+    path('investor/<int:id>/', InvestorNotificationDetailView.as_view(), name='investor_notification_detail'),
 ]
