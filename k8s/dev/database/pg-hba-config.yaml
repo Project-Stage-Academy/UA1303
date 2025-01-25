@@ -1,0 +1,13 @@
+apiVersion: v1
+data:
+  pg_hba.conf: |+
+    # Allow connections from Kubernetes pods in the same network
+    host    all    all    0.0.0.0/0    md5
+
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2025-01-21T20:55:09Z"
+  name: pg-hba-config
+  namespace: default
+  resourceVersion: "52104"
+  uid: 8f052449-ebf6-4b64-b6a3-7e2722777925

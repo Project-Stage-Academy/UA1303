@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: db-statefulset
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: forum-db
+  template:
+    metadata:
+      labels:
+        app: forum-db
+    spec:
+      containers:
+      - name: forum-db
+        image: postgres:15
+        imagePullPolicy: IfNotPresent
+        ports:  
+        - containerPort: 5432
+        envFrom:
+          - secretRef:
+              name: secret-db-credentials
+        volumeMounts:
+        - name: forum-db-data
+          mountPath: /var/lib/postgresql/data
+        - name: pg-hba-config
+          mountPath: /etc/postgresql/pg_hba.conf
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+        - name: forum-db-data
+          persistentVolumeClaim:
+            claimName: forum-db-pvc
+        - name: pg-hba-config
+          configMap:
+            name: pg-hba-config
