@@ -3,7 +3,7 @@ from projects.serializers import ProjectSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from .models import StartupProfile, InvestorProfile
+from .models import StartupProfile, InvestorProfile, ViewedStratups
 
 User = get_user_model()
 
@@ -83,3 +83,35 @@ class PublicStartupProfileSerializer(serializers.ModelSerializer):
             'city',
             'description',
         ]
+
+
+class ViewedStratupReadSerializer(serializers.ModelSerializer):
+    
+    startup_id= serializers.StringRelatedField(source='startup.id', read_only=True)
+    company_name= serializers.StringRelatedField(source='startup.company_name', read_only=True)
+
+    
+    class Meta:
+        model = ViewedStratups
+        fields = [
+            'startup_id',
+            'company_name',
+            'viewed_at'
+        ]
+
+
+class ViewedStratupCreateSerializer(serializers.ModelSerializer):
+    
+    investor = serializers.PrimaryKeyRelatedField(
+        queryset=InvestorProfile.objects.all()
+    )
+    startup = serializers.PrimaryKeyRelatedField(
+        queryset=StartupProfile.objects.all()
+    )
+
+    class Meta:
+        model = ViewedStratups
+        fields = ['investor', 'startup', 'viewed_at']
+
+    def create(self, validated_data):
+        return ViewedStratups.objects.create(**validated_data)

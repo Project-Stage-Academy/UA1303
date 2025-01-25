@@ -15,10 +15,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
-
-from .models import InvestorProfile, StartupProfile
+from .models import InvestorProfile, StartupProfile, ViewedStratups
 from .permissions import IsOwnerOrReadOnly, IsStartup, IsInvestor
-from .serializers import InvestorProfileSerializer, StartupProfileSerializer, PublicStartupProfileSerializer
+from .serializers import (InvestorProfileSerializer, StartupProfileSerializer,
+                          PublicStartupProfileSerializer, ViewedStratupCreateSerializer, 
+                          ViewedStratupReadSerializer)
+from users.models import Role
 
 
 class InvestorViewSet(ModelViewSet):
@@ -89,6 +91,67 @@ class StartupProfileViewSet(ModelViewSet):
         Handles GET requests for listing startup profiles.
         """
         return super().list(request, *args, **kwargs)
+    
+    @action(detail=False, 
+            methods=['get'], 
+            url_path='viewed', 
+            url_name='viewed-startups',
+            permission_classes=[IsInvestor])
+    def viewed_startups(self, request):
+        """Retrieve a list of recently viewed startups for the authenticated investor"""
+        investor = get_object_or_404(InvestorProfile, user=request.user)
+        viewed_startups = ViewedStratups.objects.filter(investor=investor).order_by('-viewed_at')
+        
+        page = self.paginate_queryset(viewed_startups)
+        if page is not None:
+            serializer = ViewedStratupReadSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+            
+        serializer = ViewedStratupReadSerializer(viewed_startups, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False,
+            methods=['delete'],
+            url_path='viewed/clear',
+            url_name='clear-viewed',
+            permission_classes=[IsInvestor])
+    def clear_viewed_history(self, request):
+        """Clear the investor's viewed startups history"""
+        investor = get_object_or_404(InvestorProfile, user=request.user)
+        ViewedStratups.objects.filter(investor=investor).delete()
+        return Response(
+            {'detail': 'Viewed startups history cleared successfully'},
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+    @swagger_auto_schema(tags=['Startup Views'])
+    @action(detail=True,
+            methods=['post'],
+            url_path='view',
+            url_name='view-startup',
+            permission_classes=[IsInvestor])
+    def track_view(self, request, pk=None):
+        """Track that a startup was viewed by the current user"""
+        
+        startup = self.get_object()
+        investor = InvestorProfile.objects.get(user=request.user)
+        
+        data = {
+            'investor': investor.id,
+            'startup': startup.id
+        }
+        serializer = ViewedStratupCreateSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        
+        return Response({'detail': f'View recorded for {startup.company_name}'}, status=status.HTTP_200_OK)
+
+    def retrieve(self, request, *args, **kwargs):
+        response = super().retrieve(request, *args, **kwargs)
+        if request.auth.get("role") == Role.INVESTOR:
+            self.track_view(request, pk=kwargs.get('pk'))
+        
+        return response
 
 
 class SaveStartupViewSet(ListModelMixin, GenericViewSet):
