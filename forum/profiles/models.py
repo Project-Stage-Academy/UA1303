@@ -121,9 +121,8 @@ class ViewedStratups(models.Model):
     Model to track startup views by investors.
 
     Fields:
-        user (ForeignKey): Reference to the user model. The user must have the role "Investor" or "Both".
         startup (ForeignKey): Reference to the StartupProfile model representing the viewed startup.
-        investor (ForeignKey): Reference to the InvestorProfile model
+        investor (ForeignKey): Reference to the InvestorProfile model.
         viewed_at (DateTimeField): The timestamp when the startup was viewed.
     """
     startup = models.ForeignKey(StartupProfile, on_delete=models.CASCADE)
