@@ -19,4 +19,4 @@ spec:
         - containerPort: 3000
         envFrom:
         - secretRef:
-            name: secret-env
+            name: secret-frontend
