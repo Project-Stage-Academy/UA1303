@@ -1,12 +1,16 @@
 from rest_framework import status
 from rest_framework.test import APITestCase
-from ..models import InvestorNotification
+from ..models import InvestorNotification, NotificationPreference
 from ..serializers import InvestorNotificationReadSerializer, InvestorNotificationCreateSerializer
-from ..factories import InvestorNotificationFactory, NotificationCategoryFactory, InvestorProfileFactory, StartupProfileFactory, UserFactory
+from ..factories import InvestorNotificationFactory, NotificationCategoryFactory, InvestorProfileFactory, StartupProfileFactory, UserFactory, ProjectFactory
 from django.urls import reverse
 from django.test import RequestFactory
 from unittest.mock import patch
 from rest_framework_simplejwt.exceptions import InvalidToken
+from django.db.models.signals import post_save
+from projects.models import Project
+from notifications.signals import notify_investors_about_project_update
+from notifications.models import InvestorNotification, NotificationCategory
 
 
 class InvestorNotificationSerializerTests(APITestCase):
@@ -439,3 +443,104 @@ class InvestorNotificationQuerySetTests(APITestCase):
         # Assert that all notifications are now marked as read
         self.assertTrue(self.notification1.is_read)
         self.assertTrue(self.notification2.is_read)
+
+
+class ProjectUpdateNotificationSignalTests(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        """
+        Set up static data for the tests. This method runs once for the entire test class.
+        """
+        # Create an investor and a startup
+        cls.investor = InvestorProfileFactory()
+        cls.startup = StartupProfileFactory()
+
+        # Create a project owned by the startup
+        cls.project = ProjectFactory(startup=cls.startup)
+
+        # Add the investor as a follower of the startup
+        cls.startup.followers.add(cls.investor)
+
+        # Create the "Project Update" notification category
+        cls.project_update_category = NotificationCategory.objects.create(
+            name="Project Update",
+            description="Notifications about updates to project information.",
+        )
+
+        # Create a notification preference for the investor
+        NotificationPreference.objects.create(
+            user=cls.investor.user,
+        )
+        cls.investor.user.notification_preferences.allowed_notification_categories.add(cls.project_update_category)
+
+    def setUp(self):
+        """
+        Set up data for each individual test. This method runs before each test.
+        """
+        # Connect the signal
+        post_save.connect(notify_investors_about_project_update, sender=Project)
+
+    def tearDown(self):
+        """
+        Clean up after each test. This method runs after each test.
+        """
+        # Disconnect the signal
+        post_save.disconnect(notify_investors_about_project_update, sender=Project)
+
+    def test_project_update_notification(self):
+        """
+        Test that a notification is created when a project is updated.
+        """
+        # Update the project
+        self.project.title = "Updated Project Title"
+        self.project.save()
+
+        # Check that a notification was created for the investor
+        notifications = InvestorNotification.objects.filter(
+            investor=self.investor,
+            startup=self.startup,
+            notification_category=self.project_update_category,
+        )
+        self.assertEqual(notifications.count(), 1)
+        self.assertEqual(notifications.first().notification_category.name, "Project Update")
+        self.assertFalse(notifications.first().is_read)
+
+    def test_project_update_notification_not_created_on_create(self):
+        """
+        Test that no notification is created when a project is created (only on update).
+        """
+        # Create a new project
+        new_project = Project.objects.create(
+            startup=self.startup,
+            title="New Project",
+            funding_goal=20000.00,
+            is_published=True,
+            is_completed=False,
+        )
+
+        # Check that no notification was created for the investor
+        notifications = InvestorNotification.objects.filter(
+            investor=self.investor,
+            startup=self.startup,
+            notification_category=self.project_update_category,
+        )
+        self.assertEqual(notifications.count(), 0)
+
+    def test_project_update_notification_not_created_for_non_investors(self):
+        """
+        Test that no notification is created for users who are not investors in the project.
+        """
+        # Create another investor who is not following the startup
+        other_investor = InvestorProfileFactory()
+
+        # Update the project
+        self.project.title = "Updated Project Title"
+        self.project.save()
+
+        # Check that no notification was created for the other investor
+        notifications = InvestorNotification.objects.filter(
+            investor=other_investor,
+            startup=self.startup,
+            notification_category=self.project_update_category,
+        )
+        self.assertEqual(notifications.count(), 0)

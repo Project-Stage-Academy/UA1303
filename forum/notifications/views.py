@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 ROLE_CATEGORIES = {
     Role.STARTUP: ["follow"],
-    Role.INVESTOR: ["profile_update", "new_project"],
+    Role.INVESTOR: ["profile_update", "new_project", "Project Update"],
 }
 
 PREFERENCE_RESPONSES = {

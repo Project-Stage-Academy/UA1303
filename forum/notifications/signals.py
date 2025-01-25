@@ -1,6 +1,6 @@
 from django.db.models.signals import m2m_changed, post_save
 from django.dispatch import receiver
-from .models import NotificationCategory, NotificationPreference, NotificationMethod
+from .models import NotificationCategory, NotificationPreference, NotificationMethod, InvestorNotification
 from profiles.models import InvestorProfile, StartupProfile
 from .serializers import (
     StartUpNotificationCreateSerializer,
@@ -170,4 +170,63 @@ def notify_investors_about_new_project(sender, instance, created, **kwargs):
             'startup': instance.startup.id,
         }
         create_notification(investor, notification_category, data, InvestorNotificationCreateSerializer)
-                
+
+#notify investors when a followed project is updated
+@receiver(post_save, sender=Project)
+def notify_investors_about_project_update(sender, instance, created, **kwargs):
+    """
+    Notify investors when a project they are following is updated.
+    """
+    logger.info("Signal triggered for project update.")
+    logger.info(f"Project ID: {instance.id}, Created: {created}")
+
+    # Skip if the project is being created
+    if created:
+        logger.info("Project is being created. Skipping notification.")
+        return
+
+    try:
+        # Get the "Project Update" notification category
+        notification_category = NotificationCategory.objects.get(name='Project Update')
+        logger.info(f"Notification category: {notification_category.id}")
+
+        # Get all investors who are following the startup associated with the project
+        investors = instance.startup.followers.select_related('user').all()
+        logger.info(f"Investors found: {investors.count()}")
+
+        # Prepare a list of valid notifications
+        notifications_to_create = []
+
+        for investor in investors:
+            # Check if the investor has allowed notifications for this category
+            try:
+                preference = NotificationPreference.objects.get(
+                    user=investor.user,
+                    allowed_notification_categories=notification_category,
+                )
+                if not preference:
+                    logger.info(f"Investor {investor.id} does not allow notifications for this category.")
+                    continue
+            except NotificationPreference.DoesNotExist:
+                logger.info(f"Investor {investor.id} does not have a notification preference for this category.")
+                continue
+            logger.info(f"Creating notification for investor: {investor.id}")
+            notifications_to_create.append({
+                'notification_category': notification_category,
+                'investor': investor,
+                'startup': instance.startup,
+            })
+            
+        # Bulk create notifications to reduce database queries
+        if notifications_to_create:
+            created_notifications = InvestorNotification.objects.bulk_create([
+                InvestorNotification(**data) for data in notifications_to_create
+            ])
+            logger.info(f"Successfully created {len(created_notifications)} notifications.")
+        else:
+            logger.info("No notifications to create.")
+
+    except NotificationCategory.DoesNotExist:
+        logger.warning("Notification category 'Project Update' does not exist. Skipping notification.")
+    except Exception as e:
+        logger.error(f"An error occurred while processing project update notifications: {e}", exc_info=True)               
